@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple HTML5 Template</title>
+</head>
+<body>
+    <h1>Welcome to My Page</h1>
+    <p>This is a simple HTML5 template.</p>
+    <button onclick="openPopup()">Open Popup</button>
+    <div id="message"></div> <!-- To display messages from the popup -->
+
+<script>
+    function openPopup() {
+        window.open('popup.html', 'Popup Window', 'width=600,height=400');
+    }
+
+    // Listen for messages from the popup
+    window.addEventListener('message', function(event) {
+        // Ensure the message is coming from a trusted source, if necessary
+        // For example:
+        // if (event.origin !== "http://yourdomain.com") return;
+
+        // Display the received message
+        document.getElementById('message').innerText = 'Received from popup: ' + JSON.stringify(event.data);
+    });
+</script>
+
+</body>
+</html>

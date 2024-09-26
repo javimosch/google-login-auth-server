@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple HTML5 Template</title>
+</head>
+<body>
+    <h1>Welcome to My Popup</h1>
+    <p>This is a simple HTML5 template.</p>
+    <button onclick="sendMessageToParent()">Send Message to Parent</button>
+
+<script>
+    function sendMessageToParent() {
+        const message = {foo: 1};
+        window.opener.postMessage(message, '*'); // Sends the message to the parent window
+    }
+</script>
+
+</body>
+</html>
