@@ -1,52 +1,73 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Home</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 
-<body>
-
-  <div>
-  <button onclick="openPopup()">Login with Google (Popup with callback)</button>
+<body class="bg-gray-100 flex flex-col items-center justify-center h-screen">
+  <h1 class="text-3xl font-bold mb-6">External Application</h1>
+  <div class="mb-4">
+    <button id="loginBtn" class="bg-blue-500 text-white font-semibold py-2 px-4 rounded shadow hover:bg-blue-600 transition duration-200">Login with Google</button>
   </div>
-  <div id="message"></div> <!-- To display messages from the popup -->
+  <div id="message" class="text-lg text-gray-700 mb-4"></div> <!-- To display messages from the popup -->
   <div>
-    <button id="redirectBtn" style="display:none" onclick="redirectToExternalApp()">Click to continue to external app</button>
-  </div>
-
+    <button id="redirectBtn" style="display:none" onclick="redirectToExternalApp()" class="bg-green-500 text-white font-semibold py-2 px-4 rounded shadow hover:bg-green-600 transition duration-200">Click to continue to external app</button>
+  </div>              
   <script>
-    let redirectDetails = {} 
-    let popupWindow; // Declare a variable to hold the reference to the popup window
+ 
+    function useGoogleLogin(options = {}) {
+      let state = {
+        redirectUrl:''
+      }
+      window.addEventListener('message', function (event) {
+        console.log('event',{
+          event
+        })
+        if (event.data.type === 'google_auth') {
+          document.getElementById('message').innerText = 'Received from popup: ' + JSON.stringify(event.data);
+          state.redirectUrl = event.data.data.redirectUrl
+          if(options.onPopupDataReceived){
+            options.onPopupDataReceived(event.data, state)
+          }
+        }
+      });
 
-    function openPopup() {
-      popupWindow = window.open('/google-login', 'Popup Window', 'width=600,height=400');
+
+      function triggerPopup() {
+        window.open('/google-login', 'Popup Window', 'width=600,height=400');
+      }
+
+      return {
+        getState(){
+          return state
+        },
+        bindBtn(el) {
+          el.addEventListener('click', triggerPopup)
+        }
+      }
     }
 
-    // Listen for messages from the popup
-    window.addEventListener('message', function (event) {
-      document.getElementById('message').innerText = 'Received from popup: ' + JSON.stringify(event.data);
-
-      redirectDetails.redirectUrl = event.data.data.redirectUrl
-
-      if(redirectDetails.redirectUrl){
-        redirectBtn.style.display='block'
-      }else{
-        redirectBtn.style.display='none'
+    const { getState, bindBtn } = useGoogleLogin({
+      onPopupDataReceived(data, state){
+        if (state.redirectUrl) {
+          redirectBtn.style.display = 'block'
+        } else {
+          redirectBtn.style.display = 'none'
+        }
       }
+    })
+    bindBtn(window.loginBtn)
 
-      if (popupWindow) {
-        //popupWindow.close();
-        popupWindow = null; // Clear the reference
-      }
-
-    });  
-
-    function redirectToExternalApp(){
-      if(redirectDetails.redirectUrl){
-        location.href=redirectDetails.redirectUrl
+    function redirectToExternalApp() {
+      if (getState().redirectUrl) {
+        location.href = getState().redirectUrl
       }
     }
+
   </script>
 
 </body>

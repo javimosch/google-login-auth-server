@@ -16,7 +16,7 @@
     <script>
         function initialize() {
           const message = {
-            type: 'google_details',
+            type: 'google_auth',
             data: {
               user: {
                 name: '<%= user.name %>', // User's name
@@ -78,7 +78,7 @@
               });
 
 
-              let message = { data: {} }
+              
               linkedData.googleEmail = googleEmail
               console.log('linkedData', {
                 linkedData

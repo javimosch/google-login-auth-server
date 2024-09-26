@@ -1,12 +1,13 @@
 {
-  "name": "custom-google-login-poc",
+  "name": "google-auth-integration-poc",
   "version": "1.0.0",
-  "description": "Node.js application with Google OAuth2 authentication",
+  "description": "Proof of Concept for integrating Google OAuth2 authentication with an external application",
   "main": "src/server.js",
   "scripts": {
     "dev": "concurrently \"npx nodemon external-app/server\" \"npx nodemon src/server.js\"",
     "externalAppServer": "node external-app/api",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "startAll": "concurrently \"node external-app/server\" \"node src/server.js\""
   },
   "dependencies": {
     "axios": "^0.21.1",
@@ -16,7 +17,7 @@
     "faker": "5.5.3",
     "google-auth-library": "^7.0.2",
     "jsonwebtoken": "^9.0.2",
-    "qs": "^6.13.0",
+    "nodemon": "^3.1.7",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {

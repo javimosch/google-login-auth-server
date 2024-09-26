@@ -21,16 +21,16 @@ This Proof of Concept (POC) implements a custom Google login integration that ac
 4. The system checks if the Google email is already linked to an external user.
 5. If linked:
     - The external JWT is generated.
-    - The JWT is submitted to the parent app (external app).
-    - Normal login via JWT is performed in the external app.
+    - The external JWT is submitted to the parent app along with a redirect URL.
+    - The parent app decides whether to redirect to the external app or use the JWT directly.
 6. If not linked:
     - The custom view displays a form for external auth details (e.g., username/password).
     - User enters external auth details.
     - The system verifies the auth details with the external app.
     - User clicks a link button to associate their Google account with the external account.
     - The system links the accounts via an API route.
-    - The external JWT is generated and submitted to the parent app.
-    - Normal login via JWT is performed in the external app.
+    - The external JWT is generated and submitted to the parent app along with a redirect URL.
+    - The parent app decides whether to redirect to the external app or use the JWT directly.
 
 ## **Implementation Details**
 
@@ -41,9 +41,38 @@ This Proof of Concept (POC) implements a custom Google login integration that ac
 
 ## **API Routes**
 
-1. **Verify External Auth**: Validates the external application's username and password.
-2. **Link Google Account**: Associates a Google email with an external user account.
-3. **Generate JWT**: Creates a JWT for the authenticated user.
+1. **Link Google Account**: Associates a Google email with an external user account.
+   - **Endpoint**: `POST /googleauth/link`
+   - **Request Body**: Must include `client`, `username`, and `googleEmail`.
+   - **Response**: On success, returns a message and a JWT token.
+   - **Example Response**:
+     ```json
+     {
+       "message": "Google email linked successfully.",
+       "token": "<JWT_TOKEN>"
+     }
+     ```
+
+2. **Get External ID by Google Email**: Retrieves the user identifier associated with a provided Google email address.
+   - **Endpoint**: `GET /googleauth/external-id/{googleEmail}`
+   - **Response**: Returns an identifier if linked, or null if not.
+   - **Example Response**:
+     ```json
+     {
+       "identifier": "<userId>_<clientId>"
+     }
+     ```
+
+3. **Generate JWT**: Creates a JWT for the authenticated user based on their Google email.
+   - **Endpoint**: `GET /googleauth/get_jwt`
+   - **Query Parameter**: Requires `googleEmail`.
+   - **Response**: Returns a JWT token or an error message if the user is not found.
+   - **Example Response**:
+     ```json
+     {
+       "token": "<JWT_TOKEN>"
+     }
+     ```
 
 ## **Security Considerations**
 
@@ -82,7 +111,6 @@ I follow the steps from Rclone Google drive configuration:
 https://rclone.org/drive/#:~:text=You%20can%20set%20up%20rclone%20with%20Google%20Drive#:~:text=You%20can%20set%20up%20rclone%20with%20Google%20Drive
 
 Note: You can skip enabling the Google drive API.
-
 
 ## **Conclusion**
 

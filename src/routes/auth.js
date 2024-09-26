@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const axios = require("axios");
-const qs = require("qs");
 const {
   client,
   clientId,
@@ -9,6 +8,9 @@ const {
   redirectUri,
 } = require("../config/google");
 
+/**
+ * When popup is opened the first time, this route is called and google login is triggered
+ */
 router.get("/google", (req, res) => {
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   url.searchParams.append("client_id", clientId);
@@ -18,6 +20,9 @@ router.get("/google", (req, res) => {
   res.redirect(url.toString());
 });
 
+/**
+ * Google will redirect to this route
+ */
 router.get("/google/callback", async (req, res) => {
   const { code } = req.query;
   try {
@@ -41,6 +46,7 @@ router.get("/google/callback", async (req, res) => {
     if (payload.linked) {
       try {
         let token = await getExternalApiJWTByGoogleEmail(payload.email);
+        payload.token=token
         payload.redirectUrl =
           process.env.EXTERNAL_APP_URL + "/?_token=" + token;
       } catch (err) {
@@ -58,9 +64,6 @@ router.get("/google/callback", async (req, res) => {
       process.env.EXTERNAL_APP_LINK_FIELDS || "email,password"
     ).split(",");
 
-    /* res.redirect(
-      `/google-login?user=${encodeURIComponent(JSON.stringify(payload))}&linkFields=${linkFields.join(',')}`
-    ); */
     res.render("google-login", {
       user: payload,
       linkFields: linkFields.join(","),
@@ -75,13 +78,16 @@ router.get("/google/callback", async (req, res) => {
   }
 });
 
+/**
+ * Popup (if no linked) will call this route to trigger a verification/linking and jwt gen on external app
+ */
 router.post("/link-google-account", async (req, res) => {
   console.log('/link-google-account', {
     body:req.body
   })
   let r = await callExternalApi(
     "POST",
-    "/googleauth/link",
+    process.env.EXTERNAL_API__LINK_ACCOUNT_ROUTE||"/googleauth/link",
     req.body
   );
   let { token } = r
@@ -94,6 +100,13 @@ router.post("/link-google-account", async (req, res) => {
   res.json(payload);
 });
 
+/**
+ * Helper to call external app api
+ * @param {*} method 
+ * @param {*} relativePath 
+ * @param {*} payload 
+ * @returns 
+ */
 async function callExternalApi(method, relativePath, payload = null) {
   const externalAppApiUrl = process.env.EXTERNAL_APP_API_URL;
   const externalAppApiKey = process.env.EXTERNAL_APP_API_KEY;
@@ -148,16 +161,26 @@ async function injectLinkedPropertyToGoogleDetails(payload) {
   }
 }
 
+/**
+ * Helper to call external app api route to get user identifier given googleEmail
+ * @param {*} googleEmail 
+ * @returns 
+ */
 async function getExternalApiExternalIdByGoogleEmail(googleEmail) {
   return await callExternalApi(
     "GET",
-    `/external-id/${encodeURIComponent(googleEmail)}`
+    `${process.env.EXTERNAL_API__GET_EXTERNAL_ID_ROUTE||'/googleauth/external-id'}/${encodeURIComponent(googleEmail)}`
   );
 }
 
+/**
+ * Helper to get external app api JWT given google email (ensure link is done first)
+ * @param {*} googleEmail 
+ * @returns 
+ */
 async function getExternalApiJWTByGoogleEmail(googleEmail) {
   try {
-    const response = await callExternalApi("GET", `/googleauth/get_jwt`, {
+    const response = await callExternalApi("GET", process.env.EXTERNAL_API__GET_JWT_ROUTE||`/googleauth/get_jwt`, {
       googleEmail,
     });
 
