@@ -1,10 +1,54 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>Home</title>
 </head>
+
 <body>
-  <h1>Welcome to Google Login App</h1>
-  <a href="/login">Login</a>
+
+  <div>
+  <button onclick="openPopup()">Login with Google (Popup with callback)</button>
+  </div>
+  <div id="message"></div> <!-- To display messages from the popup -->
+  <div>
+    <button id="redirectBtn" style="display:none" onclick="redirectToExternalApp()">Click to continue to external app</button>
+  </div>
+
+  <script>
+    let redirectDetails = {} 
+    let popupWindow; // Declare a variable to hold the reference to the popup window
+
+    function openPopup() {
+      popupWindow = window.open('/google-login', 'Popup Window', 'width=600,height=400');
+    }
+
+    // Listen for messages from the popup
+    window.addEventListener('message', function (event) {
+      document.getElementById('message').innerText = 'Received from popup: ' + JSON.stringify(event.data);
+
+      redirectDetails.redirectUrl = event.data.data.redirectUrl
+
+      if(redirectDetails.redirectUrl){
+        redirectBtn.style.display='block'
+      }else{
+        redirectBtn.style.display='none'
+      }
+
+      if (popupWindow) {
+        //popupWindow.close();
+        popupWindow = null; // Clear the reference
+      }
+
+    });  
+
+    function redirectToExternalApp(){
+      if(redirectDetails.redirectUrl){
+        location.href=redirectDetails.redirectUrl
+      }
+    }
+  </script>
+
 </body>
+
 </html>

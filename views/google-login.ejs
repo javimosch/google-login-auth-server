@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Google Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    <% if (!user || Object.keys(user).length === 0) { %>
+      window.location.href = '/auth/google';
+    <% } %>
+  </script>
+</head>
+
+<body class="flex items-center justify-center h-screen bg-gray-200">
+  <% if (user) { %>
+    <script>
+        function initialize() {
+          const message = {
+            type: 'google_details',
+            data: {
+              user: {
+                name: '<%= user.name %>', // User's name
+                email: '<%= user.email %>', // User's email
+                picture: '<%= user.picture %>'  // User's profile picture
+              },
+              token: '<%= user.token || "" %>',
+              redirectUrl: '<%= user.redirectUrl || "" %>'
+            }
+          };
+
+          let googleEmail = message.data.user.email
+          let linkFields = `<%= linkFields %>`;
+
+          if (!message.data.token) {
+            alert('Linking mode ' + linkFields);
+
+            // Split linkFields into an array
+            const fieldsArray = linkFields.split(',');
+            const formContainer = document.createElement('div');
+            formContainer.className = 'bg-white p-6 rounded-lg shadow-md';
+
+            // Create form
+            const form = document.createElement('form');
+            form.className = 'space-y-4';
+
+            fieldsArray.forEach(field => {
+              const inputGroup = document.createElement('div');
+              inputGroup.className = 'flex flex-col';
+
+              const label = document.createElement('label');
+              label.className = 'font-bold mb-1';
+              label.innerText = field.charAt(0).toUpperCase() + field.slice(1);
+              inputGroup.appendChild(label);
+
+              const input = document.createElement('input');
+              input.type = 'text'; // You can customize input type based on field
+              input.name = field;
+              input.className = 'px-4 py-2 border rounded';
+              input.required = true; // Make input required
+              inputGroup.appendChild(input);
+
+              form.appendChild(inputGroup);
+            });
+
+            const submitButton = document.createElement('button');
+            submitButton.type = 'submit';
+            submitButton.className = 'px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600';
+            submitButton.innerText = 'Link Account';
+            form.appendChild(submitButton);
+
+            // Link form submission
+            form.onsubmit = function (event) {
+              event.preventDefault();
+              const formData = new FormData(form);
+              let linkedData = {};
+              formData.forEach((value, key) => {
+                linkedData[key] = value;
+              });
+
+
+              let message = { data: {} }
+              linkedData.googleEmail = googleEmail
+              console.log('linkedData', {
+                linkedData
+              })
+
+              console.log('linkedData', {
+                linkedData
+              });
+
+              // Fetch to /link-google-account (POST) with linkedData as body
+              fetch('/auth/link-google-account', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(linkedData)  // Send linkedData as JSON
+              })
+                .then(response => {
+                  if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                  }
+                  return response.json();  // Parse the JSON from the response
+                })
+                .then(response => {
+                  const redirectUrl = response.data.redirectUrl;
+                  // You might want to do something with redirectUrl, like redirecting
+                  if (!redirectUrl) {
+                    console.error('Redirect URL not found in the response.');
+                  }
+                  response.data.redirectUrl = redirectUrl
+                  window.opener.postMessage(message, '*');
+                  window.close();
+                })
+                .catch(error => {
+                  console.error('There was a problem with the fetch operation:', error);
+                });
+
+
+
+            }
+
+            formContainer.appendChild(form);
+            document.body.appendChild(formContainer);
+          } else {
+
+            if (window.opener) {
+              window.opener.postMessage(message, '*'); // Sends the message to the parent window
+              window.close(); // Close the popup window
+            }
+          }
+        }
+      initialize();
+    </script>
+
+    <% } %>
+</body>
+
+</html>

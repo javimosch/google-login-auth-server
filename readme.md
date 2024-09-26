@@ -73,6 +73,17 @@ This Proof of Concept (POC) implements a custom Google login integration that ac
 - Additional authentication providers
 - Enhanced error handling and user feedback
 
+## Google API configuration
+
+I follow the steps from Rclone Google drive configuration:
+
+"Here is how to create your own Google Drive client ID for rclone"
+
+https://rclone.org/drive/#:~:text=You%20can%20set%20up%20rclone%20with%20Google%20Drive#:~:text=You%20can%20set%20up%20rclone%20with%20Google%20Drive
+
+Note: You can skip enabling the Google drive API.
+
+
 ## **Conclusion**
 
 This POC demonstrates a flexible approach to integrating Google authentication with external user management systems. It provides a seamless user experience for linking Google accounts with existing user accounts in external applications.
