@@ -1,10 +1,13 @@
 require("dotenv").config(); // Activate dotenv
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
-const faker = require("faker");
+const Chance = require("chance");
 const apiAuthMiddleware = require("./apiAuthMiddleware");
 
 const jwt = require("jsonwebtoken");
+
+// Initialize Chance
+const chance = new Chance();
 
 // Middleware to verify JWT
 const authenticateJWT = (req, res, next) => {
@@ -32,11 +35,15 @@ const app = express();
 const port = 3001;
 
 // Setup SQLite Database using a file
-const db = new sqlite3.Database("./database.sqlite", (err) => {
+const dbFilePath = "./tmp/database.sqlite";
+const db = new sqlite3.Database(dbFilePath, (err) => {
   if (err) {
     console.error(err.message);
+  } else {
+    console.log(`Connected to the SQLite database at ${dbFilePath}`);
   }
 });
+console.log("db init");
 
 // Create clients and users tables
 db.serialize(() => {
@@ -62,6 +69,7 @@ db.serialize(() => {
     FOREIGN KEY (userId) REFERENCES users (id)
   )`);
 });
+console.log("db serialized");
 
 // Middleware to parse JSON
 app.use(express.json());
@@ -161,9 +169,14 @@ const getUsersCount = async () => {
 
 // Function to migrate clients and users
 const migrateData = async () => {
+  console.log("Starting data migration..."); // Log start of migration
   // Check if there are any clients or users in the database
   const existingClients = await getClientsCount(); // This function should return the count of clients in the database
   const existingUsers = await getUsersCount(); // This function should return the count of users in the database
+
+  console.log(
+    `Existing clients: ${existingClients}, Existing users: ${existingUsers}`
+  ); // Log existing counts
 
   if (existingClients > 0 || existingUsers > 0) {
     console.log(
@@ -173,8 +186,8 @@ const migrateData = async () => {
   }
 
   // Generate random clients and insert them
-  const clientPromises = Array.from({ length: 4 }, () => {
-    const clientName = faker.company.companyName();
+  const clientPromises = Array.from({ length: 4 }, (_, index) => {
+    const clientName = index === 0 ? "sabatier" : chance.company();
     return createClient(clientName);
   });
 
@@ -182,8 +195,8 @@ const migrateData = async () => {
   console.log("Clients created:", clients);
 
   const fakeUsers = Array.from({ length: 9 }, () => {
-    const email = faker.internet.email();
-    const name = faker.name.findName();
+    const email = chance.email();
+    const name = chance.name();
     const clientId = clients[Math.floor(Math.random() * clients.length)].id; // Assign random clientId
     return { email, name, clientId };
   });
@@ -199,10 +212,12 @@ const migrateData = async () => {
   for (const user of fakeUsers) {
     try {
       await createUser(user.email, user.name, user.clientId);
+      console.log(`User created: ${user.email}`); // Log each created user
     } catch (err) {
       console.error(`Error creating user ${user.email}:`, err.message);
     }
   }
+  console.log("Data migration completed."); // Log completion of migration
 };
 
 // Call the migrateData function to seed the database
@@ -217,10 +232,10 @@ migrateData();
  *     parameters:
  *       - in: path
  *         name: googleEmail
- *         required: true
+ *         required: true,
  *         description: The Google email address to look up.
  *         schema:
- *           type: string
+           type: string
  *     responses:
  *       200:
  *         description: Successfully retrieved user identifier.
@@ -273,7 +288,6 @@ app.get(
   }
 );
 
-
 /**
  * @swagger
  * /googleauth/get_jwt:
@@ -283,7 +297,7 @@ app.get(
  *     parameters:
  *       - in: query
  *         name: googleEmail
- *         required: true
+ *         required: true,
  *         schema:
  *           type: string
  *         description: The Google email of the user to authenticate.
@@ -382,12 +396,14 @@ async function getJwtByGoogleEmail(googleEmail) {
 // Define the /googleauth/verify_account route
 app.post("/googleauth/link", apiAuthMiddleware, async (req, res) => {
   try {
-    
     const { client, username, password, googleEmail } = req.body;
 
-    console.log('/googleauth/link',{
-      client,username,password,googleEmail
-    })
+    console.log("/googleauth/link", {
+      client,
+      username,
+      password,
+      googleEmail,
+    });
 
     // Validate required fields
     if (!client || !username || !googleEmail) {
@@ -451,10 +467,12 @@ app.post("/googleauth/link", apiAuthMiddleware, async (req, res) => {
     });
 
     //TOKEN GEN
-    let {token} = await getJwtByGoogleEmail(googleEmail);
+    let { token } = await getJwtByGoogleEmail(googleEmail);
 
     // If everything goes well, respond with a success message
-    res.status(201).json({ message: "Google email linked successfully.", token });
+    res
+      .status(201)
+      .json({ message: "Google email linked successfully.", token });
   } catch (error) {
     console.error("Error verifying account:", {
       error,

@@ -83,13 +83,52 @@ This Proof of Concept (POC) implements a custom Google login integration that ac
 
 ## **Setup and Configuration**
 
-(Include steps for setting up the project, configuring Google OAuth, and integrating with the external application)
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd <repository-directory>
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Configure Google OAuth by creating a project in the Google Developer Console and obtaining the necessary credentials.
+4. Create a `.env` file in the root directory using `env.md` as a template and add your environment variables:
+   ```
+   cp env.md .env
+   ```
+5. Edit the `.env` file to include your specific values:
+   ```
+   PORT=3000
+   GOOGLE_CLIENT_ID=<your-client-id>
+   GOOGLE_CLIENT_SECRET=<your-client-secret>
+   ```
 
 ## **Usage**
 
 1. Integrate the Google login button in your external application.
 2. When clicked, open a popup window pointing to this project's custom authentication URL.
 3. Handle the received JWT in your external application for user authentication.
+
+## **Installation**
+
+To install the application, follow the steps in the Setup and Configuration section. Ensure that you have Node.js and npm installed on your machine.
+
+## **Development**
+
+To run the application in development mode, use the following command:
+```bash
+npm run dev
+```
+This will start both the external application and the main server using nodemon for hot reloading.
+
+## **Deployment**
+
+To deploy the application, build the Docker image and push it to your Docker repository using the `publish.sh` script:
+```bash
+./publish.sh
+```
+Ensure that your Docker environment is properly set up before running this command.
 
 ## **Limitations**
 

@@ -2,11 +2,14 @@ version: '3.8'
 
 services:
   app:
-    build: .
-    ports:
-      - '3000:3000'
+    build:
+      context: .
+      dockerfile: Dockerfile
+    expose:
+      - '3000'
+      - '3001'
+    volumes:
+      - ./tmp:/usr/src/app/tmp
     env_file:
       - .env
-    volumes:
-      - .:/usr/src/app
-    command: npm run startAll
+    restart: always
