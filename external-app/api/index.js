@@ -1,39 +1,38 @@
-require('dotenv').config(); // Activate dotenv
-const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
-const faker = require('faker');
-const apiAuthMiddleware = require('./apiAuthMiddleware')
+require("dotenv").config(); // Activate dotenv
+const express = require("express");
+const sqlite3 = require("sqlite3").verbose();
+const faker = require("faker");
+const apiAuthMiddleware = require("./apiAuthMiddleware");
 
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 
 // Middleware to verify JWT
 const authenticateJWT = (req, res, next) => {
-  let token = req.header('Authorization')?.split(' ')[1];
+  let token = req.header("Authorization")?.split(" ")[1];
 
   // Fallback to query parameter if token is not found in header
   if (!token) {
-      token = req.query._token;
+    token = req.query._token;
   }
 
   if (token) {
-      jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-          if (err) {
-              return res.sendStatus(403);
-          }
-          req.user = user;
-          next();
-      });
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+      if (err) {
+        return res.sendStatus(403);
+      }
+      req.user = user;
+      next();
+    });
   } else {
-      res.sendStatus(401);
+    res.sendStatus(401);
   }
 };
-
 
 const app = express();
 const port = 3001;
 
 // Setup SQLite Database using a file
-const db = new sqlite3.Database('./database.sqlite', (err) => {
+const db = new sqlite3.Database("./database.sqlite", (err) => {
   if (err) {
     console.error(err.message);
   }
@@ -72,12 +71,16 @@ app.use(express.json());
 // Create User
 const createUser = (email, name, clientId) => {
   return new Promise((resolve, reject) => {
-    db.run(`INSERT INTO users (email, name, clientId) VALUES (?, ?, ?)`, [email, name, clientId], function(err) {
-      if (err) {
-        return reject(err);
+    db.run(
+      `INSERT INTO users (email, name, clientId) VALUES (?, ?, ?)`,
+      [email, name, clientId],
+      function (err) {
+        if (err) {
+          return reject(err);
+        }
+        resolve({ id: this.lastID, email, name, clientId });
       }
-      resolve({ id: this.lastID, email, name, clientId });
-    });
+    );
   });
 };
 
@@ -96,31 +99,35 @@ const readUsers = () => {
 // Update User
 const updateUser = (id, email, name, clientId) => {
   return new Promise((resolve, reject) => {
-    db.run(`UPDATE users SET email = ?, name = ?, clientId = ? WHERE id = ?`, [email, name, clientId, id], function(err) {
-      if (err) {
-        return reject(err);
+    db.run(
+      `UPDATE users SET email = ?, name = ?, clientId = ? WHERE id = ?`,
+      [email, name, clientId, id],
+      function (err) {
+        if (err) {
+          return reject(err);
+        }
+        resolve({ id, email, name, clientId });
       }
-      resolve({ id, email, name, clientId });
-    });
+    );
   });
 };
 
 // Delete User
 const deleteUser = (id) => {
   return new Promise((resolve, reject) => {
-    db.run(`DELETE FROM users WHERE id = ?`, id, function(err) {
+    db.run(`DELETE FROM users WHERE id = ?`, id, function (err) {
       if (err) {
         return reject(err);
       }
       resolve();
     });
   });
-}
+};
 
 // Create Client
 const createClient = (name) => {
   return new Promise((resolve, reject) => {
-    db.run(`INSERT INTO clients (name) VALUES (?)`, [name], function(err) {
+    db.run(`INSERT INTO clients (name) VALUES (?)`, [name], function (err) {
       if (err) {
         return reject(err);
       }
@@ -128,7 +135,6 @@ const createClient = (name) => {
     });
   });
 };
-
 
 // This is how you can implement the getClientsCount and getUsersCount functions
 const getClientsCount = async () => {
@@ -153,16 +159,16 @@ const getUsersCount = async () => {
   });
 };
 
-
 // Function to migrate clients and users
 const migrateData = async () => {
-
   // Check if there are any clients or users in the database
   const existingClients = await getClientsCount(); // This function should return the count of clients in the database
   const existingUsers = await getUsersCount(); // This function should return the count of users in the database
 
   if (existingClients > 0 || existingUsers > 0) {
-    console.log('Migration not performed: Clients or users already exist in the database.');
+    console.log(
+      "Migration not performed: Clients or users already exist in the database."
+    );
     return;
   }
 
@@ -173,7 +179,7 @@ const migrateData = async () => {
   });
 
   const clients = await Promise.all(clientPromises);
-  console.log('Clients created:', clients);
+  console.log("Clients created:", clients);
 
   const fakeUsers = Array.from({ length: 9 }, () => {
     const email = faker.internet.email();
@@ -185,8 +191,8 @@ const migrateData = async () => {
   // Add the specified user with a specific clientId
   const specifiedClientId = clients[0].id; // Assign to the first client for consistency
   fakeUsers.push({
-    email: 'arancibiajav@gmail.com',
-    name: 'Aranci Biajav',
+    email: "arancibiajav@gmail.com",
+    name: "Aranci Biajav",
     clientId: specifiedClientId,
   });
 
@@ -229,39 +235,43 @@ migrateData();
  *       500:
  *         description: Internal Server Error
  */
-app.get('/googleauth/external-id/:googleEmail',apiAuthMiddleware, async (req, res) => {
-  const googleEmail = req.params.googleEmail;
+app.get(
+  "/googleauth/external-id/:googleEmail",
+  apiAuthMiddleware,
+  async (req, res) => {
+    const googleEmail = req.params.googleEmail;
 
-  try {
-    // Query the users_google table to find the userId using the provided googleEmail
-    const result = await new Promise((resolve, reject) => {
-      db.get(`
+    try {
+      // Query the users_google table to find the userId using the provided googleEmail
+      const result = await new Promise((resolve, reject) => {
+        db.get(
+          `
         SELECT users.id AS userId, users.clientId 
         FROM users_google 
         JOIN users ON users_google.userId = users.id 
-        WHERE users_google.googleEmail = ?`, 
-        [googleEmail],
-        (err, row) => {
-          if (err) {
-            return reject(err);
+        WHERE users_google.googleEmail = ?`,
+          [googleEmail],
+          (err, row) => {
+            if (err) {
+              return reject(err);
+            }
+            resolve(row);
           }
-          resolve(row);
-        }
-      );
-    });
+        );
+      });
 
-    // If a matching record is found, return the combined result
-    if (result) {
-      return res.json({ identifier: `${result.userId}_${result.clientId}` });
-    } else {
-      return res.json({ identifier: null });
+      // If a matching record is found, return the combined result
+      if (result) {
+        return res.json({ identifier: `${result.userId}_${result.clientId}` });
+      } else {
+        return res.json({ identifier: null });
+      }
+    } catch (error) {
+      console.error("Error fetching user by googleEmail:", error.message);
+      res.status(500).send("Internal Server Error");
     }
-  } catch (error) {
-    console.error('Error fetching user by googleEmail:', error.message);
-    res.status(500).send('Internal Server Error');
   }
-});
-
+);
 
 /**
  * @swagger
@@ -304,71 +314,57 @@ app.get('/googleauth/external-id/:googleEmail',apiAuthMiddleware, async (req, re
   -H "Content-Type: application/json" \
   -d '{"googleEmail": "arancibiajav@gmail.com", "userEmail": "arancibiajav@gmail.com", "googleMetadata": "{\"someKey\": \"someValue\"}"}'
  */
-  app.post('/link-google-email',apiAuthMiddleware, async (req, res) => {
-    const { googleEmail, userEmail, googleMetadata } = req.body;
-  
-    // Validate required fields
-    if (!googleEmail || !userEmail) {
-      return res.status(400).json({ error: 'Both googleEmail and userEmail are required.' });
+app.post("/link-google-email", apiAuthMiddleware, async (req, res) => {
+  const { googleEmail, userEmail, googleMetadata } = req.body;
+
+  // Validate required fields
+  if (!googleEmail || !userEmail) {
+    return res
+      .status(400)
+      .json({ error: "Both googleEmail and userEmail are required." });
+  }
+
+  try {
+    // Check if the user exists
+    const user = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT id FROM users WHERE email = ?`,
+        [userEmail],
+        (err, row) => {
+          if (err) {
+            return reject(err);
+          }
+          resolve(row);
+        }
+      );
+    });
+
+    // Handle case where user not found
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
     }
-  
-    try {
-      // Check if the user exists
-      const user = await new Promise((resolve, reject) => {
-        db.get(
-          `SELECT id FROM users WHERE email = ?`,
-          [userEmail],
-          (err, row) => {
-            if (err) {
-              return reject(err);
-            }
-            resolve(row);
+
+    // Check if the link already exists in users_google
+    const existingLink = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT * FROM users_google WHERE googleEmail = ? AND userId = ?`,
+        [googleEmail, user.id],
+        (err, row) => {
+          if (err) {
+            return reject(err);
           }
-        );
-      });
-  
-      // Handle case where user not found
-      if (!user) {
-        return res.status(404).json({ error: 'User not found.' });
-      }
-  
-      // Check if the link already exists in users_google
-      const existingLink = await new Promise((resolve, reject) => {
-        db.get(
-          `SELECT * FROM users_google WHERE googleEmail = ? AND userId = ?`,
-          [googleEmail, user.id],
-          (err, row) => {
-            if (err) {
-              return reject(err);
-            }
-            resolve(row);
-          }
-        );
-      });
-  
-      if (existingLink) {
-        // If the link already exists, update the googleMetadata
-        await new Promise((resolve, reject) => {
-          db.run(
-            `UPDATE users_google SET googleMetadata = ? WHERE googleEmail = ? AND userId = ?`,
-            [googleMetadata || null, googleEmail, user.id],
-            function(err) {
-              if (err) {
-                return reject(err);
-              }
-              resolve();
-            }
-          );
-        });
-        return res.status(200).json({ message: 'Google email metadata updated successfully.' });
-      }
-  
-      // If the link doesn't exist, create a new record in users_google
+          resolve(row);
+        }
+      );
+    });
+
+    if (existingLink) {
+      // If the link already exists, update the googleMetadata
       await new Promise((resolve, reject) => {
         db.run(
-          `INSERT INTO users_google (userId, googleEmail, googleMetadata) VALUES (?, ?, ?)`,
-          [user.id, googleEmail, googleMetadata || null], // Store null if googleMetadata is not provided
-          function(err) {
+          `UPDATE users_google SET googleMetadata = ? WHERE googleEmail = ? AND userId = ?`,
+          [googleMetadata || null, googleEmail, user.id],
+          function (err) {
             if (err) {
               return reject(err);
             }
@@ -376,16 +372,33 @@ app.get('/googleauth/external-id/:googleEmail',apiAuthMiddleware, async (req, re
           }
         );
       });
-  
-      res.status(201).json({ message: 'Google email linked successfully.' });
-    } catch (error) {
-      console.error('Error linking google email:', error.message);
-      res.status(500).send('Internal Server Error');
+      return res
+        .status(200)
+        .json({ message: "Google email metadata updated successfully." });
     }
-  });
-  
 
-  /**
+    // If the link doesn't exist, create a new record in users_google
+    await new Promise((resolve, reject) => {
+      db.run(
+        `INSERT INTO users_google (userId, googleEmail, googleMetadata) VALUES (?, ?, ?)`,
+        [user.id, googleEmail, googleMetadata || null], // Store null if googleMetadata is not provided
+        function (err) {
+          if (err) {
+            return reject(err);
+          }
+          resolve();
+        }
+      );
+    });
+
+    res.status(201).json({ message: "Google email linked successfully." });
+  } catch (error) {
+    console.error("Error linking google email:", error.message);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+/**
  * @swagger
  * /googleauth/get_jwt:
  *   get:
@@ -440,64 +453,73 @@ app.get('/googleauth/external-id/:googleEmail',apiAuthMiddleware, async (req, re
  *                   type: string
  *                   description: Error message indicating internal server error.
  */
-app.get('/googleauth/get_jwt', apiAuthMiddleware, async (req, res) => {
+app.get("/googleauth/get_jwt", apiAuthMiddleware, async (req, res) => {
   const { googleEmail } = req.query;
 
-  console.log('/googleauth/get_jwt', { query: req.query });
+  console.log("/googleauth/get_jwt", { query: req.query });
 
   if (!googleEmail) {
-      return res.status(400).json({ error: 'googleEmail is required.' });
+    return res.status(400).json({ error: "googleEmail is required." });
   }
 
   try {
-      const { token, error } = await getJwtByGoogleEmail(googleEmail);
-      if (error) {
-          return res.json({ token, error });
-      }
-      return res.json({ token });
+    const { token, error } = await getJwtByGoogleEmail(googleEmail);
+    if (error) {
+      return res.json({ token, error });
+    }
+    return res.json({ token });
   } catch (error) {
-      console.error('Error generating JWT:', error.message);
-      res.status(500).send('Internal Server Error');
+    console.error("Error generating JWT:", error.message);
+    res.status(500).send("Internal Server Error");
   }
 });
-
 
 async function getJwtByGoogleEmail(googleEmail) {
   // Find the userId using the provided googleEmail
   const result = await new Promise((resolve, reject) => {
-      db.get(`
+    db.get(
+      `
           SELECT userId FROM users_google 
-          WHERE googleEmail = ?`, 
-          [googleEmail],
-          (err, row) => {
-              if (err) {
-                  return reject(err);
-              }
-              resolve(row);
-          }
-      );
+          WHERE googleEmail = ?`,
+      [googleEmail],
+      (err, row) => {
+        if (err) {
+          return reject(err);
+        }
+        resolve(row);
+      }
+    );
   });
 
   // If a matching record is found, issue a JWT
   if (result) {
-      const payload = { userId: result.userId, googleEmail };
-      const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }); // Token expires in 1 hour
-      return { token };
+    const payload = { userId: result.userId, googleEmail };
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    }); // Token expires in 1 hour
+    return { token };
   } else {
-      return { token: null, error: "USER_NOT_FOUND" };
+    return { token: null, error: "USER_NOT_FOUND" };
   }
 }
 
 // Define the /googleauth/verify_account route
-app.post('/googleauth/link', apiAuthMiddleware, async (req, res) => {
-  const { client, username, password, googleEmail } = req.body;
-
-  // Validate required fields
-  if (!client || !username || !googleEmail) {
-    return res.status(400).json({ error: 'Client, username, and googleEmail are required.' });
-  }
-
+app.post("/googleauth/link", apiAuthMiddleware, async (req, res) => {
   try {
+    
+    const { client, username, password, googleEmail } = req.body;
+
+    console.log('/googleauth/link',{
+      client,username,password,googleEmail
+    })
+
+    // Validate required fields
+    if (!client || !username || !googleEmail) {
+      return res
+        .status(400)
+        .json({ error: "Client, username, and googleEmail are required." });
+    }
+
     // First, validate the username and client name against the database
     const user = await new Promise((resolve, reject) => {
       db.get(
@@ -514,27 +536,25 @@ app.post('/googleauth/link', apiAuthMiddleware, async (req, res) => {
 
     // If the user does not exist, return an error
     if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
+      return res.status(404).json({ error: "User not found." });
     }
 
     // Now verify the client name matches the user's associated client
     const clientMatch = await new Promise((resolve, reject) => {
-      db.get(
-        `SELECT id FROM clients WHERE name = ?`,
-        [client],
-        (err, row) => {
-          if (err) {
-            return reject(err);
-          }
-          resolve(row);
+      db.get(`SELECT id FROM clients WHERE name = ?`, [client], (err, row) => {
+        if (err) {
+          return reject(err);
         }
-      );
+        resolve(row);
+      });
     });
 
     //VERIFICATION
     // Check if the user belongs to the matched client
     if (!clientMatch || clientMatch.id !== user.clientId) {
-      return res.status(403).json({ error: 'Client name does not match the user\'s client.' });
+      return res
+        .status(403)
+        .json({ error: "Client name does not match the user's client." });
     }
 
     //LINKING
@@ -543,9 +563,9 @@ app.post('/googleauth/link', apiAuthMiddleware, async (req, res) => {
     const googleMetadata = null; // Assuming no metadata, can change based on requirement
     const linkRes = await new Promise((resolve, reject) => {
       db.run(
-        `INSERT INTO users_google (userId, googleEmail, googleMetadata) VALUES (?, ?, ?)`,
+        `INSERT OR IGNORE INTO users_google (userId, googleEmail, googleMetadata) VALUES (?, ?, ?)`,
         [user.id, googleEmail, googleMetadata],
-        function(err) {
+        function (err) {
           if (err) {
             return reject(err);
           }
@@ -555,21 +575,21 @@ app.post('/googleauth/link', apiAuthMiddleware, async (req, res) => {
     });
 
     //TOKEN GEN
-    let token = await getJwtByGoogleEmail(googleEmail)
+    let {token} = await getJwtByGoogleEmail(googleEmail);
 
     // If everything goes well, respond with a success message
-    res.status(201).json({ message: 'Google email linked successfully.', });
-
+    res.status(201).json({ message: "Google email linked successfully.", token });
   } catch (error) {
-    console.error('Error verifying account:', error.message);
-    res.status(500).send('Internal Server Error');
+    console.error("Error verifying account:", {
+      error,
+    });
+    res.status(500).send("Internal Server Error");
   }
 });
 
-
 // Add the Hello World route
-app.get('/',authenticateJWT, (req, res) => {
-  res.send('Hello World');
+app.get("/", authenticateJWT, (req, res) => {
+  res.send("Hello World");
 });
 
 app.listen(port, () => {

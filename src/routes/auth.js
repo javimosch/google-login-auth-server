@@ -76,11 +76,18 @@ router.get("/google/callback", async (req, res) => {
 });
 
 router.post("/link-google-account", async (req, res) => {
-  let { token } = await callExternalApi(
+  console.log('/link-google-account', {
+    body:req.body
+  })
+  let r = await callExternalApi(
     "POST",
     "/googleauth/link",
     req.body
   );
+  let { token } = r
+  console.log('token',{
+    r
+  })
   let payload = {
     redirectUrl : process.env.EXTERNAL_APP_URL + "/?_token=" + token
   }

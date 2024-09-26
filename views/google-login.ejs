@@ -103,12 +103,12 @@
                   return response.json();  // Parse the JSON from the response
                 })
                 .then(response => {
-                  const redirectUrl = response.data.redirectUrl;
+                  const redirectUrl = response.redirectUrl;
                   // You might want to do something with redirectUrl, like redirecting
                   if (!redirectUrl) {
                     console.error('Redirect URL not found in the response.');
                   }
-                  response.data.redirectUrl = redirectUrl
+                  message.data.redirectUrl = redirectUrl
                   window.opener.postMessage(message, '*');
                   window.close();
                 })
