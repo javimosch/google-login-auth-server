@@ -10,27 +10,44 @@
 
 <body class="bg-gray-100 flex flex-col items-center justify-center h-screen">
   <h1 class="text-3xl font-bold mb-6">External Application</h1>
-  <div class="mb-4">
-    <button id="loginBtn" class="bg-blue-500 text-white font-semibold py-2 px-4 rounded shadow hover:bg-blue-600 transition duration-200">Login with Google</button>
+  <div class="mb-6 w-full max-w-xs">
+
+    <label for="appId" class="block text-gray-700 text-sm font-semibold mb-2">App ID</label>
+    <select id="appId"
+      class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:border-blue-500">
+      <option value="" disabled selected>Select your App ID</option>
+      <% apps.forEach(function(app) { %>
+        <option value="<%= app.appId %>">
+          <%= app.appName %>
+        </option>
+        <% }) %>
+    </select>
+
+    <button id="loginBtn"
+      class="mt-4 w-full bg-blue-500 text-white font-semibold py-2 px-4 rounded shadow hover:bg-blue-600 transition duration-200">
+      Login with Google
+    </button>
   </div>
   <div id="message" class="text-lg text-gray-700 mb-4"></div> <!-- To display messages from the popup -->
   <div>
-    <button id="redirectBtn" style="display:none" onclick="redirectToExternalApp()" class="bg-green-500 text-white font-semibold py-2 px-4 rounded shadow hover:bg-green-600 transition duration-200">Click to continue to external app</button>
-  </div>              
+    <button id="redirectBtn" style="display:none" onclick="redirectToExternalApp()"
+      class="bg-green-500 text-white font-semibold py-2 px-4 rounded shadow hover:bg-green-600 transition duration-200">Click
+      to continue to external app</button>
+  </div>
   <script>
- 
+
     function useGoogleLogin(options = {}) {
       let state = {
-        redirectUrl:''
+        redirectUrl: ''
       }
       window.addEventListener('message', function (event) {
-        console.log('event',{
+        console.log('event', {
           event
         })
         if (event.data.type === 'google_auth') {
           document.getElementById('message').innerText = 'Received from popup: ' + JSON.stringify(event.data);
           state.redirectUrl = event.data.data.redirectUrl
-          if(options.onPopupDataReceived){
+          if (options.onPopupDataReceived) {
             options.onPopupDataReceived(event.data, state)
           }
         }
@@ -38,11 +55,11 @@
 
 
       function triggerPopup() {
-        window.open('/google-login', 'Popup Window', 'width=600,height=400');
+        window.open(`/auth/google?appId=${window.appId.value || ''}`, 'Popup Window', 'width=600,height=400');
       }
 
       return {
-        getState(){
+        getState() {
           return state
         },
         bindBtn(el) {
@@ -52,7 +69,7 @@
     }
 
     const { getState, bindBtn } = useGoogleLogin({
-      onPopupDataReceived(data, state){
+      onPopupDataReceived(data, state) {
         if (state.redirectUrl) {
           redirectBtn.style.display = 'block'
         } else {

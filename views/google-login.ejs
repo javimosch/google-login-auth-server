@@ -14,6 +14,8 @@
 <body class="flex items-center justify-center h-screen bg-gray-200">
   <% if (user) { %>
     <script>
+        const appId = '<%= appId || "" %>';
+
         function initialize() {
           const message = {
             type: 'google_auth',
@@ -27,13 +29,14 @@
               redirectUrl: '<%= user.redirectUrl || "" %>'
             }
           };
+          console.log({
+            message
+          })
 
           let googleEmail = message.data.user.email
           let linkFields = `<%= linkFields %>`;
 
           if (!message.data.token) {
-            alert('Linking mode ' + linkFields);
-
             // Split linkFields into an array
             const fieldsArray = linkFields.split(',');
             const formContainer = document.createElement('div');
@@ -53,7 +56,7 @@
               inputGroup.appendChild(label);
 
               const input = document.createElement('input');
-              input.type = 'text'; // You can customize input type based on field
+              input.type = field === 'password' ? 'password' : 'text'; // Set type to password if the field name is 'password'
               input.name = field;
               input.className = 'px-4 py-2 border rounded';
               input.required = true; // Make input required
@@ -94,7 +97,10 @@
                 headers: {
                   'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(linkedData)  // Send linkedData as JSON
+                body: JSON.stringify({
+                  payload: linkedData,
+                  appId
+                })  // Send linkedData as JSON
               })
                 .then(response => {
                   if (!response.ok) {

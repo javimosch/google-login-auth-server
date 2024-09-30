@@ -5,7 +5,7 @@ const router = express.Router();
  * Test page
  */
 router.get('/', (req, res) => {
-  res.render('index');
+  res.render('index',{apps:global.applications});
 });
 
 /**

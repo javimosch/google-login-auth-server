@@ -29,3 +29,13 @@ PORT=3000
 MICROSERVICE_GOOGLELOGIN_API_KEY=secret
 
 JWT_SECRET=secret
+
+# MongoDB Configuration
+MONGO_URI=your_mongo_uri
+DB_NAME=your_database_name
+
+# Auth-Applications
+AUTH_APPLICATIONS=app1:Application One,app2:Application Two,app3:Application Three
+
+# Auth-Applications-custom can be configured be either configuring apps.yml or overriding single properties here
+GEOREDV3__appName=GeoredV2

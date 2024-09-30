@@ -1,0 +1,21 @@
+apps:
+  georedv3:
+    EXTERNAL_APP_URL: "http://localhost:3001"
+    EXTERNAL_APP_API_KEY: "secret"
+    EXTERNAL_APP_LINK_FIELDS: ["clientName", "username", "password"]
+    EXTERNAL_APP_API_URL: "http://localhost:3001"
+    EXTERNAL_API__GET_EXTERNAL_ID_ROUTE: "/googleauth/external-id"
+    EXTERNAL_API__GET_JWT_ROUTE: "/googleauth/get_jwt"
+    GOOGLE_CLIENT_ID: ""
+    GOOGLE_CLIENT_SECRET: ""
+    GOOGLE_REDIRECT_URI: "http://localhost:3000/auth/google/callback"
+  styx:
+    EXTERNAL_APP_URL: "https://example.com/app2"
+    EXTERNAL_APP_API_KEY: "your_api_key_2"
+    EXTERNAL_APP_LINK_FIELDS: ["field3", "field4"]
+    EXTERNAL_APP_API_URL: "https://api.example.com/app2"
+    EXTERNAL_API__GET_EXTERNAL_ID_ROUTE: "/googleauth/external-id"
+    EXTERNAL_API__GET_JWT_ROUTE: "/googleauth/get_jwt"
+    GOOGLE_CLIENT_ID: ""
+    GOOGLE_CLIENT_SECRET: ""
+    GOOGLE_REDIRECT_URI: "http://localhost:3000/auth/google/callback"
