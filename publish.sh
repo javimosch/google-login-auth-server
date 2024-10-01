@@ -1,7 +1,9 @@
 #!/bin/sh
 
-# Build the Docker image
-docker build -t javimosch/google-login-auth-server .
+TAG=${1:-latest}
 
-# Push the Docker image to the repository
-docker push javimosch/google-login-auth-server
+# Build the Docker image with a custom tag
+docker build -t javimosch/google-login-auth-server${TAG:+:$TAG} .
+
+# Push the Docker image to the repository with the custom tag
+docker push javimosch/google-login-auth-server${TAG:+:$TAG}
