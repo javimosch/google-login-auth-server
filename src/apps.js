@@ -47,8 +47,9 @@ for (let index in applications) {
   let appId = app.appId;
   for (let x in app) {
     if (!["appId"].includes(x)) {
-      if (process.env[`${appId.toUpperCase()}__${x}`]) {
-        applications[index][x] = process.env[`${appId.toUpperCase()}__${x}`];
+      console.log("CHECK",`${appId.toUpperCase()}__${x.toUpperCase()}`)
+      if (process.env[`${appId.toUpperCase()}__${x.toUpperCase()}`]) {
+        applications[index][x] = process.env[`${appId.toUpperCase()}__${x.toUpperCase()}`];
       }
     }
   }
@@ -110,5 +111,7 @@ global.useAppAPIs = function (appId) {
     },
   };
 };
+
+global.applications=applications
 
 module.exports = applications;

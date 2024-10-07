@@ -23,9 +23,13 @@
         <% }) %>
     </select>
 
-    <button id="loginBtn"
+    <button id="googleLoginBtn"
       class="mt-4 w-full bg-blue-500 text-white font-semibold py-2 px-4 rounded shadow hover:bg-blue-600 transition duration-200">
       Login with Google
+    </button>
+    <button id="gitlabLoginBtn"
+      class="mt-4 w-full bg-blue-500 text-white font-semibold py-2 px-4 rounded shadow hover:bg-blue-600 transition duration-200">
+      Login with Gitlab
     </button>
   </div>
   <div id="message" class="text-lg text-gray-700 mb-4"></div> <!-- To display messages from the popup -->
@@ -36,7 +40,7 @@
   </div>
   <script>
 
-    function useGoogleLogin(options = {}) {
+    function useOpenIdPopupLogin(providerId, options = {}) {
       let state = {
         redirectUrl: ''
       }
@@ -44,7 +48,7 @@
         console.log('event', {
           event
         })
-        if (event.data.type === 'google_auth') {
+        if (event.data.type === `${providerId}_auth`) {
           document.getElementById('message').innerText = 'Received from popup: ' + JSON.stringify(event.data);
           state.redirectUrl = event.data.data.redirectUrl
           if (options.onPopupDataReceived) {
@@ -55,29 +59,50 @@
 
 
       function triggerPopup() {
-        window.open(`/auth/google?appId=${window.appId.value || ''}`, 'Popup Window', 'width=600,height=400');
+        window.open(`/auth/authorize/${providerId}?appId=${window.appId.value || ''}`, 'Popup Window', 'width=600,height=400');
+      }
+
+      function bindBtn(el) {
+        el.addEventListener('click', triggerPopup)
+      }
+
+      if(options.el){
+        bindBtn(options.el)
       }
 
       return {
         getState() {
           return state
         },
-        bindBtn(el) {
-          el.addEventListener('click', triggerPopup)
-        }
+        bindBtn
       }
     }
 
-    const { getState, bindBtn } = useGoogleLogin({
+    let getState = null
+
+    const toogleRedirectButton = (isVisible)=>{
+      if (isVisible) {
+        redirectBtn.style.display = 'block'
+      } else {
+        redirectBtn.style.display = 'none'
+      }
+    }
+
+    const { getState:getGoogleLoginState } = useOpenIdPopupLogin('google',{
+      el: window.googleLoginBtn,
       onPopupDataReceived(data, state) {
-        if (state.redirectUrl) {
-          redirectBtn.style.display = 'block'
-        } else {
-          redirectBtn.style.display = 'none'
-        }
+        toogleRedirectButton(!!state.redirectUrl)
+        getState = getGoogleLoginState
       }
     })
-    bindBtn(window.loginBtn)
+
+    const { getState:getGitlabLoginState } = useOpenIdPopupLogin('gitlab',{
+      el: window.gitlabLoginBtn,
+      onPopupDataReceived(data, state) {
+        toogleRedirectButton(!!state.redirectUrl)
+        getState = getGitlabLoginState
+      }
+    })
 
     function redirectToExternalApp() {
       if (getState().redirectUrl) {

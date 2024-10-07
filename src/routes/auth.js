@@ -1,11 +1,60 @@
 const express = require("express");
 const router = express.Router();
 const { useGoogleAPI } = require("../config/google");
+const { useGitLabAPI } = require('../config/gitlab');
+
+router.get("/authorize/:providerId", (req, res) => {
+  const providerId = req.params.providerId;
+  let match = global.applications.find(a=>a.appId===providerId)
+  if (!match) {
+    console.error(`Invalid providerId specified: ${providerId}`)
+    return res.status(400).send("Invalid provider specified");
+  }
+  handleOAuth(req, res, providerId);
+});
+
+function handleOAuth(req, res, providerId) {
+  const query = req.query;
+
+  let app = global.useAppDetails(req.query.appId, `/auth/authorize/${providerId}`);
+
+  let providerDetails = global.useAppDetails(providerId, `/auth/authorize/${providerId}`);
+
+  if(!providerDetails.openid_provider){
+    throw new Error("Invalid provider")
+  }
+  if(app.openid_provider){
+    throw new Error('Invalid app') // Apps (Geored/Styx) vs idp Providers (Google/Gitlab/Veolia)
+  }
+
+  const { redirect_url:redirectUri, client_id:clientId, auth_url:authUrl, scope } = providerDetails
+
+  console.log(`/auth/authorize/${providerId}`, {
+    app,
+    redirectUri,
+    providerDetails
+  });
+
+  const callbackUrl = new URL(redirectUri);
+  Object.keys(query).forEach((key) => {
+    if (key !== "provider") {
+      callbackUrl.searchParams.append(key, query[key]);
+    }
+  });
+
+  const url = new URL(authUrl);
+  url.searchParams.append("client_id", clientId);
+  url.searchParams.append("redirect_uri", callbackUrl.toString());
+  url.searchParams.append("response_type", "code");
+  url.searchParams.append("scope", scope);
+
+  res.redirect(url.toString());
+}
 
 /**
  * When popup is opened the first time, this route is called and google login is triggered
  */
-router.get("/google", (req, res) => {
+/* router.get("/google", (req, res) => {
   // Extract query parameters from request
   const query = req.query;
 
@@ -35,29 +84,44 @@ router.get("/google", (req, res) => {
 
   // Redirect to Google authentication
   res.redirect(url.toString());
-});
+}); */
 
 /**
- * Google will redirect to this route
+ * openid idp will redirect to this route
  */
-router.get("/google/callback", async (req, res) => {
+router.get("/callback/:providerId", async (req, res) => {
   const { code } = req.query;
-
-  console.log("/google/callback", {
+  const providerId = req.params.providerId //i.g google/gitlab/veolia
+  const routePath = `/callback/${providerId}`
+  
+  console.log(routePath, {
     query: req.query,
   });
 
   try {
     const appId = req.query.appId;
-    const { createGoogleClientByApp } = useGoogleAPI();
-    const { getGoogleDetailsGivenCode } = createGoogleClientByApp(appId);
-    const payload = await getGoogleDetailsGivenCode(code);
-    const googleEmail = payload.email;
+    let app = global.useAppDetails(appId, `/callback/${providerId}`);
 
-    let app = global.useAppDetails(appId, "/google/callback");
+    let payload, idpEmail;
+    
+    if (providerId === 'google') {
+      const { createGoogleClientByApp } = useGoogleAPI();
+      const { getGoogleDetailsGivenCode } = createGoogleClientByApp(appId);
+      payload = await getGoogleDetailsGivenCode(code);
+      idpEmail = payload.email;
+    } else if (providerId === 'gitlab') {
+      const { createGitLabClientByApp } = useGitLabAPI();
+      const { getGitLabDetailsGivenCode } = createGitLabClientByApp(providerId,appId);
+      payload = await getGitLabDetailsGivenCode(code);
+      idpEmail = payload.email;
+    } else {
+      throw new Error(`Unsupported provider: ${providerId}`);
+    }
 
-    const linkDocument = await global.getUserGoogleLinkByGoogleEmail(
-      googleEmail
+    const linkDocument = await global.getUserLinkByEmail(
+      providerId,
+      appId,
+      idpEmail
     );
 
     payload.linked = !!linkDocument;
@@ -68,13 +132,13 @@ router.get("/google/callback", async (req, res) => {
         payload.token = token;
         payload.redirectUrl = app.EXTERNAL_APP_URL + "/?_token=" + token;
       } catch (err) {
-        console.log("ERROR /google/callback get jwt", {
+        console.log(`ERROR ${routePath} get jwt`, {
           err,
         });
       }
     }
 
-    console.log("/google/callback", {
+    console.log(routePath, {
       payload,
     });
 
@@ -82,10 +146,11 @@ router.get("/google/callback", async (req, res) => {
     linkFields =
       linkFields instanceof Array ? linkFields : linkFields.split(",");
 
-    res.render("google-login", {
+    res.render("popup-login", {
       user: payload,
       linkFields: linkFields.join(","),
       appId,
+      providerId
     });
   } catch (error) {
     console.error("Authentication error:", {
@@ -137,12 +202,12 @@ router.post("/link-google-account", async (req, res) => {
   let payload = req.body.payload;
   let appId = req.body.appId;
   let app = global.useAppDetails(appId, "/link-google-account");
-  let {googleEmail} = payload
+  let {idpEmail} = payload
   let { externalId: externalUserId } =
     await getExternalUserIdGivenAppAccountDetails(appId, payload);
 
   //@todo Store/Retrieve google metadata from redis/cache
-  await linkExternalUser(appId, externalUserId, googleEmail, {});
+  await linkExternalUser(req.body.providerId,appId, externalUserId, idpEmail, {});
   let token = await getExternalToken(externalUserId,appId);
 
   let response = {

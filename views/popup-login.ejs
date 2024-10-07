@@ -6,7 +6,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     <% if (!user || Object.keys(user).length === 0) { %>
-      window.location.href = '/auth/google';
+      const providerId = '<%= providerId || "" %>';  
+      window.location.href = `/auth/authorize/${providerId}`;
     <% } %>
   </script>
 </head>
@@ -14,11 +15,13 @@
 <body class="flex items-center justify-center h-screen bg-gray-200">
   <% if (user) { %>
     <script>
+        const providerId = '<%= providerId || "" %>';  
         const appId = '<%= appId || "" %>';
+        
 
         function initialize() {
           const message = {
-            type: 'google_auth',
+            type: `${providerId}_auth`,
             data: {
               user: {
                 name: '<%= user.name %>', // User's name
@@ -99,7 +102,8 @@
                 },
                 body: JSON.stringify({
                   payload: linkedData,
-                  appId
+                  appId,
+                  providerId
                 })  // Send linkedData as JSON
               })
                 .then(response => {

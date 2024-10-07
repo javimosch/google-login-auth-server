@@ -4,7 +4,7 @@ const app = express();
 const authRoutes = require('./routes/auth');
 const indexRoutes = require('./routes/index');
 const db = require('./config/db'); // Import the database connection logic
-global.applications = require('./apps'); // Load applications from apps.js
+require('./apps'); // Load applications from apps.js
 
 //Print applications configurations while hidding sensitive fields
 console.log({
