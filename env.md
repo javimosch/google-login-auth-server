@@ -1,41 +1,26 @@
-# Google Login Auth server
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-GOOGLE_REDIRECT_URI=http://localhost:3000/auth/google/callback
-
-# Base url for external api
-EXTERNAL_APP_API_URL=http://localhost:3001
-
-# Customize external endpoint routes
-EXTERNAL_API__LINK_ACCOUNT_ROUTE=/googleauth/link
-EXTERNAL_API__GET_EXTERNAL_ID_ROUTE=/googleauth/external-id
-EXTERNAL_API__GET_JWT_ROUTE=/googleauth/get_jwt
-
-# This is optional if we want to redirect to external app.
-# If we integrate the popup from the external app, we will just retrieve the jwt
-EXTERNAL_APP_URL=http://localhost:3001
-
-# Auth with external app (/googleauth routes)
-EXTERNAL_APP_API_KEY=secret
-
-# What fields to ask if the link is needed
-EXTERNAL_APP_LINK_FIELDS=client,username,password
+# Main application config
 
 PORT=3000
 
-# External app config
+# MongoDB Configuration
+MONGO_URI=mongodb://xx:xx@xx:27017?authSource=admin
+DB_NAME=sso-auth-server
 
-# If a request has this bearer, we grants access to /googleauth routes
-MICROSERVICE_GOOGLELOGIN_API_KEY=secret
+# Auth Applications can be configured be either configuring apps.yml or overriding single properties here
+
+GITLAB__CLIENT_ID=xx
+GITLAB__CLIENT_SECRET=xx
+GITLAB__REDIRECT_URL=http://localhost:3000/auth/callback/gitlab
+
+GOOGLE__CLIENT_ID=xx
+GOOGLE__CLIENT_SECRET=xx
+GOOGLE__REDIRECT_URL=http://localhost:3000/auth/callback/google
+
+# External app config -------------------------------------------------------
+
+# If a request has this bearer, we grants access to /ssoauth routes
+MICROSERVICE_SSOLOGIN_API_KEY=secret
 
 JWT_SECRET=secret
 
-# MongoDB Configuration
-MONGO_URI=your_mongo_uri
-DB_NAME=your_database_name
 
-# Auth-Applications
-AUTH_APPLICATIONS=app1:Application One,app2:Application Two,app3:Application Three
-
-# Auth-Applications-custom can be configured be either configuring apps.yml or overriding single properties here
-GEOREDV3__appName=GeoredV2

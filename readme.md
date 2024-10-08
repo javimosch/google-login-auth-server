@@ -1,12 +1,12 @@
-## Custom Google Login Integration POC
+## Custom SSO Login Integration POC
 
 ## **Overview**
 
-This Proof of Concept (POC) implements a custom Google login integration that acts as an intermediary between an external application and Google authentication. It provides a seamless way to link Google accounts with existing user accounts in an external application.
+This Proof of Concept (POC) implements a custom SSO login integration that acts as an intermediary between an external application and some idp provider such as Google/Gitlab or other OpenID idp. It provides a seamless way to link idp accounts with existing user accounts in an external application (i.g Geored/Styx/Ecobox)
 
 ## **Key Features**
 
-1. Custom Google authentication flow
+1. Custom SSO authentication flow
 2. External user account linking
 3. JWT generation for authenticated users
 4. Popup-based authentication process
@@ -15,10 +15,10 @@ This Proof of Concept (POC) implements a custom Google login integration that ac
 
 ## **Authentication Flow**
 
-1. User clicks a Google login button in the external application.
+1. User clicks an idp login button in the external application.
 2. A popup window opens, loading a custom view from this project.
-3. The custom view attempts to log in with Google.
-4. The system checks if the Google email is already linked to an external user.
+3. The custom view attempts to log in with idp.
+4. The system checks if the idp email is already linked to an external user.
 5. If linked:
     - The external JWT is generated.
     - The external JWT is submitted to the parent app along with a redirect URL.
@@ -27,7 +27,7 @@ This Proof of Concept (POC) implements a custom Google login integration that ac
     - The custom view displays a form for external auth details (e.g., username/password).
     - User enters external auth details.
     - The system verifies the auth details with the external app.
-    - User clicks a link button to associate their Google account with the external account.
+    - User clicks a link button to associate their idp account with the external account.
     - The system links the accounts via an API route.
     - The external JWT is generated and submitted to the parent app along with a redirect URL.
     - The parent app decides whether to redirect to the external app or use the JWT directly.
@@ -35,44 +35,13 @@ This Proof of Concept (POC) implements a custom Google login integration that ac
 ## **Implementation Details**
 
 - Built with Node.js and Express
-- Uses Google OAuth 2.0 for authentication
+- Uses idp OpenID for authentication
 - Implements a custom view for the authentication process
 - Manages token generation and user linking logic
 
 ## **API Routes**
 
-1. **Link Google Account**: Associates a Google email with an external user account.
-   - **Endpoint**: `POST /googleauth/link`
-   - **Request Body**: Must include `client`, `username`, and `googleEmail`.
-   - **Response**: On success, returns a message and a JWT token.
-   - **Example Response**:
-     ```json
-     {
-       "message": "Google email linked successfully.",
-       "token": "<JWT_TOKEN>"
-     }
-     ```
-
-2. **Get External ID by Google Email**: Retrieves the user identifier associated with a provided Google email address.
-   - **Endpoint**: `GET /googleauth/external-id/{googleEmail}`
-   - **Response**: Returns an identifier if linked, or null if not.
-   - **Example Response**:
-     ```json
-     {
-       "identifier": "<userId>_<clientId>"
-     }
-     ```
-
-3. **Generate JWT**: Creates a JWT for the authenticated user based on their Google email.
-   - **Endpoint**: `GET /googleauth/get_jwt`
-   - **Query Parameter**: Requires `googleEmail`.
-   - **Response**: Returns a JWT token or an error message if the user is not found.
-   - **Example Response**:
-     ```json
-     {
-       "token": "<JWT_TOKEN>"
-     }
-     ```
+See external-apis.md or external-app folder for example.
 
 ## **Security Considerations**
 
@@ -97,17 +66,20 @@ This Proof of Concept (POC) implements a custom Google login integration that ac
    ```
    cp env.md .env
    ```
-5. Edit the `.env` file to include your specific values:
-   ```
-   PORT=3000
-   GOOGLE_CLIENT_ID=<your-client-id>
-   GOOGLE_CLIENT_SECRET=<your-client-secret>
-   ```
+
+5. External applications have a config file apps.yml, but sesitive envs can be overriden using the .env file
+
+```bash
+# {APPID}__{ENVNAME}
+GEORED__EXTERNAL_APP_API_KEY=secret
+```
 
 ## **Usage**
 
-1. Integrate the Google login button in your external application.
+1. Integrate the idp login button in your external application. See useOpenIdPopupLogin inside views/index.ejs
+
 2. When clicked, open a popup window pointing to this project's custom authentication URL.
+
 3. Handle the received JWT in your external application for user authentication.
 
 ## **Installation**
@@ -141,7 +113,7 @@ Ensure that your Docker environment is properly set up before running this comma
 - Additional authentication providers
 - Enhanced error handling and user feedback
 
-## Google API configuration
+## Google idp/openid configuration
 
 I follow the steps from Rclone Google drive configuration:
 
@@ -151,6 +123,10 @@ https://rclone.org/drive/#:~:text=You%20can%20set%20up%20rclone%20with%20Google%
 
 Note: You can skip enabling the Google drive API.
 
+## Gitlab idp/openid configuration
+
+https://docs.gitlab.com/ee/integration/oauth_provider.html
+
 ## **Conclusion**
 
-This POC demonstrates a flexible approach to integrating Google authentication with external user management systems. It provides a seamless user experience for linking Google accounts with existing user accounts in external applications.
+This POC demonstrates a flexible approach to integrating openid authentication with external user management systems. It provides a seamless user experience for linking idp accounts (i.g Google/Gitlab/Veolia-openid) with existing user accounts in external applications. (Geored/Styx/Ecobox)

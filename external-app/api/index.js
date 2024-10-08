@@ -225,7 +225,7 @@ migrateData();
 
 /**
  * @swagger
- * /googleauth/external-id:
+ * /ssoauth/external-id:
  *   post:
  *     summary: Get external identifier by username and client name
  *     description: Retrieve the external user identifier based on the provided username, client name, and password (mock).
@@ -295,10 +295,10 @@ migrateData();
  *               properties:
  *                 error:
  */
-app.post("/googleauth/external-id", apiAuthMiddleware, async (req, res) => {
+app.post("/ssoauth/external-id", apiAuthMiddleware, async (req, res) => {
   const { username, clientName, password } = req.body; // Accept password
 
-  console.log("/googleauth/external-id", { username, clientName, password }); // Log for debugging
+  console.log("/ssoauth/external-id", { username, clientName, password }); // Log for debugging
 
   // Validate required fields
   if (!username || !clientName) {
@@ -366,7 +366,7 @@ app.post("/googleauth/external-id", apiAuthMiddleware, async (req, res) => {
 // external-app/api/index.js (291-406)
 /**
  * @swagger
- * /googleauth/get_jwt:
+ * /ssoauth/get_jwt:
  *   get:
  *     summary: Get JWT Token
  *     description: Retrieve a JWT token for a user based on their externalUserId.
@@ -419,10 +419,10 @@ app.post("/googleauth/external-id", apiAuthMiddleware, async (req, res) => {
  *                   type: string
  *                   description: Error message indicating internal server error.
  */
-app.get("/googleauth/get_jwt", apiAuthMiddleware, async (req, res) => {
+app.get("/ssoauth/get_jwt", apiAuthMiddleware, async (req, res) => {
   const { externalUserId } = req.query;
 
-  console.log("/googleauth/get_jwt", { query: req.query });
+  console.log("/ssoauth/get_jwt", { query: req.query });
 
   // Validate required field
   if (!externalUserId) {

@@ -1,3 +1,4 @@
 # Ignore the SQLite database file
 database.sqlite
 node_modules/
+.env
