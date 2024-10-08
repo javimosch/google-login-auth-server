@@ -36,13 +36,19 @@ function handleOAuth(req, res, providerId) {
   });
 
   const callbackUrl = new URL(redirectUri);
-  Object.keys(query).forEach((key) => {
+  /*Object.keys(query).forEach((key) => {
     if (key !== "provider") {
       callbackUrl.searchParams.append(key, query[key]);
     }
-  });
+  });*/
 
-  const url = new URL(authUrl);
+  const authUrlObj = new URL(authUrl)
+
+  const state = encodeURIComponent(JSON.stringify({ appId: 'georedv3' }));
+  //callbackUrl.searchParams.append('state', state);
+  authUrlObj.searchParams.append('state', state);
+
+  const url = new URL(authUrlObj.toString());
   url.searchParams.append("client_id", clientId);
   url.searchParams.append("redirect_uri", callbackUrl.toString());
   url.searchParams.append("response_type", "code");
@@ -91,6 +97,9 @@ function handleOAuth(req, res, providerId) {
  */
 router.get("/callback/:providerId", async (req, res) => {
   const { code } = req.query;
+
+  const decodedState = JSON.parse(decodeURIComponent(req.query.state||"{}"));
+
   const providerId = req.params.providerId //i.g google/gitlab/veolia
   const routePath = `/callback/${providerId}`
   
@@ -99,7 +108,7 @@ router.get("/callback/:providerId", async (req, res) => {
   });
 
   try {
-    const appId = req.query.appId;
+    const {appId} = decodedState
     let app = global.useAppDetails(appId, `/callback/${providerId}`);
 
     let payload, idpEmail;

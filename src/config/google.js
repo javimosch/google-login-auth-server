@@ -22,7 +22,7 @@ function useGoogleAPI() {
       })
 
       const redirectUriComputed = new URL(redirectUri);
-      redirectUriComputed.searchParams.append("appId", appId);
+      //redirectUriComputed.searchParams.append("appId", appId);
       const client = new OAuth2Client(clientId);
 
       return {
