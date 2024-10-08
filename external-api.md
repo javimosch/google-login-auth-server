@@ -15,8 +15,8 @@ Available in apps.yml. Customizable via envs (Sensitive envs).
   - `{APPNAME}__EXTERNAL_APP_API_URL`: The base URL for the external API (e.g., `http://localhost:3001`).
 
 - **API Routes**:
-  - `{APPNAME}__EXTERNAL_API__GET_EXTERNAL_ID_ROUTE`: Route for retrieving the external ID associated with a Google email (default: `/googleauth/external-id`).
-  - `{APPNAME}__EXTERNAL_API__GET_JWT_ROUTE`: Route for obtaining a JWT token using a Google email (default: `/googleauth/get_jwt`).
+  - `{APPNAME}__EXTERNAL_API__GET_EXTERNAL_ID_ROUTE`: Route for retrieving the external ID associated with a Google email (default: `/ssoauth/external-id`).
+  - `{APPNAME}__EXTERNAL_API__GET_JWT_ROUTE`: Route for obtaining a JWT token using a Google email (default: `/ssoauth/get_jwt`).
 
 - **API Key**:
   - `{APPNAME}__EXTERNAL_APP_API_KEY`: The API key required for authentication with the external application.

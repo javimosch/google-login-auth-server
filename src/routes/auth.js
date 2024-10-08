@@ -106,7 +106,7 @@ router.get("/callback/:providerId", async (req, res) => {
     
     if (providerId === 'google') {
       const { createGoogleClientByApp } = useGoogleAPI();
-      const { getGoogleDetailsGivenCode } = createGoogleClientByApp(appId);
+      const { getGoogleDetailsGivenCode } = createGoogleClientByApp(providerId,appId);
       payload = await getGoogleDetailsGivenCode(code);
       idpEmail = payload.email;
     } else if (providerId === 'gitlab') {
@@ -258,9 +258,13 @@ async function getExternalUserIdGivenAppAccountDetails(appId, accountDetails) {
 
   const {callExternalApi} =  global.useAppAPIs(appId)
 
+  if(!app.EXTERNAL_API__GET_EXTERNAL_ID_ROUTE){
+    throw new Error('app.EXTERNAL_API__GET_EXTERNAL_ID_ROUTE required')
+  }
+
   return await callExternalApi(
     "POST",
-    `${app.EXTERNAL_API__GET_EXTERNAL_ID_ROUTE || "/googleauth/external-id"}`,
+    `${app.EXTERNAL_API__GET_EXTERNAL_ID_ROUTE}`,
     { ...accountDetails }
   );
 }
@@ -291,10 +295,19 @@ async function getExternalUserIdGivenAppAccountDetails(appId, accountDetails) {
  */
 async function getExternalToken(externalUserId, appId) {
   try {
+    let app = global.useAppDetails(
+      appId,
+      "getExternalToken"
+    );
     const {callExternalApi} =  global.useAppAPIs(appId)
+
+    if(!app.EXTERNAL_API__GET_JWT_ROUTE){
+      throw new Error('app.EXTERNAL_API__GET_EXTERNAL_ID_ROUTE required')
+    }
+
     const response = await callExternalApi(
       "GET",
-      process.env.EXTERNAL_API__GET_JWT_ROUTE || `/googleauth/get_jwt`,
+      app.EXTERNAL_API__GET_JWT_ROUTE,
       {
         externalUserId,
       }

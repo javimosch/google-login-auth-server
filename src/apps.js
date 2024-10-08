@@ -77,6 +77,9 @@ global.useAppAPIs = function (appId) {
       const externalAppApiUrl = app.EXTERNAL_APP_API_URL;
       const externalAppApiKey = app.EXTERNAL_APP_API_KEY;
 
+      console.log('callExternalApi',{
+        url:`${externalAppApiUrl}${relativePath}`
+      })
       try {
         const config = {
           method: method,
