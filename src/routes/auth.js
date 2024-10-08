@@ -199,10 +199,10 @@ router.post("/link-google-account", async (req, res) => {
   console.log("/link-google-account", {
     body: req.body,
   });
-  let payload = req.body.payload;
+  let payload = req.body.payload;//from popup-login.ejs
   let appId = req.body.appId;
   let app = global.useAppDetails(appId, "/link-google-account");
-  let {idpEmail} = payload
+  let {email:idpEmail} = payload 
   let { externalId: externalUserId } =
     await getExternalUserIdGivenAppAccountDetails(appId, payload);
 

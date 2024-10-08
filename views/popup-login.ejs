@@ -36,7 +36,7 @@
             message
           })
 
-          let googleEmail = message.data.user.email
+          let email = message.data.user.email
           let linkFields = `<%= linkFields %>`;
 
           if (!message.data.token) {
@@ -85,7 +85,7 @@
 
 
               
-              linkedData.googleEmail = googleEmail
+              linkedData.email = email
               console.log('linkedData', {
                 linkedData
               })
