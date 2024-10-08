@@ -35,7 +35,10 @@ function handleOAuth(req, res, providerId) {
     providerDetails
   });
 
-  const callbackUrl = new URL(redirectUri);
+  let callbackUrl = new URL(redirectUri);
+  callbackUrl += '/'+req.query.appId
+
+  console.log('callbackUrl',callbackUrl.toString())
   /*Object.keys(query).forEach((key) => {
     if (key !== "provider") {
       callbackUrl.searchParams.append(key, query[key]);
@@ -44,9 +47,8 @@ function handleOAuth(req, res, providerId) {
 
   const authUrlObj = new URL(authUrl)
 
-  const state = encodeURIComponent(JSON.stringify({ appId: 'georedv3' }));
-  //callbackUrl.searchParams.append('state', state);
-  authUrlObj.searchParams.append('state', state);
+  //const state = encodeURIComponent(JSON.stringify({ appId: 'georedv3' }));
+  //authUrlObj.searchParams.append('state', state);
 
   const url = new URL(authUrlObj.toString());
   url.searchParams.append("client_id", clientId);
@@ -95,10 +97,11 @@ function handleOAuth(req, res, providerId) {
 /**
  * openid idp will redirect to this route
  */
-router.get("/callback/:providerId", async (req, res) => {
+router.get("/callback/:providerId/:appId?", async (req, res) => {
   const { code } = req.query;
 
-  const decodedState = JSON.parse(decodeURIComponent(req.query.state||"{}"));
+  //const decodedState = JSON.parse(decodeURIComponent(req.query.state||"{}"));
+  const decodedState = {appId: req.params.appId}
 
   const providerId = req.params.providerId //i.g google/gitlab/veolia
   const routePath = `/callback/${providerId}`
@@ -164,6 +167,7 @@ router.get("/callback/:providerId", async (req, res) => {
   } catch (error) {
     console.error("Authentication error:", {
       error,
+      data:error.response.data,
     });
     res.render("error", {
       error: error.message,

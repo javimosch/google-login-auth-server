@@ -27,15 +27,19 @@ function useGoogleAPI() {
 
       return {
         async getGoogleDetailsGivenCode(code) {
+          const tokenReqPayload= {
+            client_id: clientId,
+            client_secret: clientSecret,
+            code,
+            grant_type: "authorization_code",
+            redirect_uri: redirectUriComputed.toString()+'/'+appId,
+          }
+          console.log('getGoogleDetailsGivenCode',{
+            tokenReqPayload
+          })
           const { data } = await axios.post(
             "https://oauth2.googleapis.com/token",
-            {
-              client_id: clientId,
-              client_secret: clientSecret,
-              code,
-              grant_type: "authorization_code",
-              redirect_uri: redirectUriComputed,
-            }
+            tokenReqPayload
           );
           const ticket = await client.verifyIdToken({
             idToken: data.id_token,

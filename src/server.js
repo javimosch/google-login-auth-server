@@ -21,6 +21,11 @@ console.log({
 app.set('view engine', 'ejs');
 app.use(express.json());
 
+app.use('/',(req,res,next)=>{
+    console.log("REQ",req.url)
+    next()
+})
+
 app.use('/', indexRoutes);
 app.use('/auth', authRoutes);
 
