@@ -1,13 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const { useGoogleAPI } = require("../config/google");
-const { useGitLabAPI } = require('../config/gitlab');
+const { useGitLabAPI } = require("../config/gitlab");
 
 router.get("/authorize/:providerId", (req, res) => {
   const providerId = req.params.providerId;
-  let match = global.applications.find(a=>a.appId===providerId)
+  let match = global.applications.find((a) => a.appId === providerId);
   if (!match) {
-    console.error(`Invalid providerId specified: ${providerId}`)
+    console.error(`Invalid providerId specified: ${providerId}`);
     return res.status(400).send("Invalid provider specified");
   }
   handleOAuth(req, res, providerId);
@@ -16,36 +16,47 @@ router.get("/authorize/:providerId", (req, res) => {
 function handleOAuth(req, res, providerId) {
   const query = req.query;
 
-  let app = global.useAppDetails(req.query.appId, `/auth/authorize/${providerId}`);
+  let app = global.useAppDetails(
+    req.query.appId,
+    `/auth/authorize/${providerId}`
+  );
 
-  let providerDetails = global.useAppDetails(providerId, `/auth/authorize/${providerId}`);
+  let providerDetails = global.useAppDetails(
+    providerId,
+    `/auth/authorize/${providerId}`
+  );
 
-  if(!providerDetails.openid_provider){
-    throw new Error("Invalid provider")
+  if (!providerDetails.openid_provider) {
+    throw new Error("Invalid provider");
   }
-  if(app.openid_provider){
-    throw new Error('Invalid app') // Apps (Geored/Styx) vs idp Providers (Google/Gitlab/Veolia)
+  if (app.openid_provider) {
+    throw new Error("Invalid app"); // Apps (Geored/Styx) vs idp Providers (Google/Gitlab/Veolia)
   }
 
-  const { redirect_url:redirectUri, client_id:clientId, auth_url:authUrl, scope } = providerDetails
+  const {
+    redirect_url: redirectUri,
+    client_id: clientId,
+    auth_url: authUrl,
+    scope,
+  } = providerDetails;
 
   console.log(`/auth/authorize/${providerId}`, {
     app,
     redirectUri,
-    providerDetails
+    providerDetails,
   });
 
   let callbackUrl = new URL(redirectUri);
-  callbackUrl += '/'+req.query.appId
+  callbackUrl += "/" + req.query.appId;
 
-  console.log('callbackUrl',callbackUrl.toString())
+  console.log("callbackUrl", callbackUrl.toString());
   /*Object.keys(query).forEach((key) => {
     if (key !== "provider") {
       callbackUrl.searchParams.append(key, query[key]);
     }
   });*/
 
-  const authUrlObj = new URL(authUrl)
+  const authUrlObj = new URL(authUrl);
 
   //const state = encodeURIComponent(JSON.stringify({ appId: 'georedv3' }));
   //authUrlObj.searchParams.append('state', state);
@@ -55,6 +66,18 @@ function handleOAuth(req, res, providerId) {
   url.searchParams.append("redirect_uri", callbackUrl.toString());
   url.searchParams.append("response_type", "code");
   url.searchParams.append("scope", scope);
+
+  console.log(
+    "authorize",
+    {
+      client_id: clientId,
+      redirect_uri: callbackUrl.toString(),
+      response_type: "code",
+      scope,
+    },
+    "Full-url",
+    decodeURIComponent(url.toString())
+  );
 
   res.redirect(url.toString());
 }
@@ -101,29 +124,35 @@ router.get("/callback/:providerId/:appId?", async (req, res) => {
   const { code } = req.query;
 
   //const decodedState = JSON.parse(decodeURIComponent(req.query.state||"{}"));
-  const decodedState = {appId: req.params.appId}
+  const decodedState = { appId: req.params.appId };
 
-  const providerId = req.params.providerId //i.g google/gitlab/veolia
-  const routePath = `/callback/${providerId}`
-  
+  const providerId = req.params.providerId; //i.g google/gitlab/veolia
+  const routePath = `/callback/${providerId}`;
+
   console.log(routePath, {
     query: req.query,
   });
 
   try {
-    const {appId} = decodedState
+    const { appId } = decodedState;
     let app = global.useAppDetails(appId, `/callback/${providerId}`);
 
     let payload, idpEmail;
-    
-    if (providerId === 'google') {
+
+    if (providerId === "google") {
       const { createGoogleClientByApp } = useGoogleAPI();
-      const { getGoogleDetailsGivenCode } = createGoogleClientByApp(providerId,appId);
+      const { getGoogleDetailsGivenCode } = createGoogleClientByApp(
+        providerId,
+        appId
+      );
       payload = await getGoogleDetailsGivenCode(code);
       idpEmail = payload.email;
-    } else if (providerId === 'gitlab') {
+    } else if (providerId === "gitlab") {
       const { createGitLabClientByApp } = useGitLabAPI();
-      const { getGitLabDetailsGivenCode } = createGitLabClientByApp(providerId,appId);
+      const { getGitLabDetailsGivenCode } = createGitLabClientByApp(
+        providerId,
+        appId
+      );
       payload = await getGitLabDetailsGivenCode(code);
       idpEmail = payload.email;
     } else {
@@ -162,12 +191,12 @@ router.get("/callback/:providerId/:appId?", async (req, res) => {
       user: payload,
       linkFields: linkFields.join(","),
       appId,
-      providerId
+      providerId,
     });
   } catch (error) {
     console.error("Authentication error:", {
       error,
-      data:error.response.data,
+      data: error.response.data,
     });
     res.render("error", {
       error: error.message,
@@ -212,16 +241,22 @@ router.post("/link-google-account", async (req, res) => {
   console.log("/link-google-account", {
     body: req.body,
   });
-  let payload = req.body.payload;//from popup-login.ejs
+  let payload = req.body.payload; //from popup-login.ejs
   let appId = req.body.appId;
   let app = global.useAppDetails(appId, "/link-google-account");
-  let {email:idpEmail} = payload 
+  let { email: idpEmail } = payload;
   let { externalId: externalUserId } =
     await getExternalUserIdGivenAppAccountDetails(appId, payload);
 
   //@todo Store/Retrieve google metadata from redis/cache
-  await linkExternalUser(req.body.providerId,appId, externalUserId, idpEmail, {});
-  let token = await getExternalToken(externalUserId,appId);
+  await linkExternalUser(
+    req.body.providerId,
+    appId,
+    externalUserId,
+    idpEmail,
+    {}
+  );
+  let token = await getExternalToken(externalUserId, appId);
 
   let response = {
     redirectUrl: app.EXTERNAL_APP_URL + "/?_token=" + token,
@@ -250,11 +285,11 @@ async function getExternalUserIdGivenAppAccountDetails(appId, accountDetails) {
     "getExternalUserIdGivenAppAccountDetails"
   );
 
-  console.log('getExternalUserIdGivenAppAccountDetails',{
+  console.log("getExternalUserIdGivenAppAccountDetails", {
     appId,
     app,
-    path:app.EXTERNAL_API__GET_EXTERNAL_ID_ROUTE
-  })
+    path: app.EXTERNAL_API__GET_EXTERNAL_ID_ROUTE,
+  });
 
   // Validate that accountDetails keys match app.EXTERNAL_APP_LINK_FIELDS
   const validKeys = new Set(app.EXTERNAL_APP_LINK_FIELDS);
@@ -269,10 +304,10 @@ async function getExternalUserIdGivenAppAccountDetails(appId, accountDetails) {
     );
   }
 
-  const {callExternalApi} =  global.useAppAPIs(appId)
+  const { callExternalApi } = global.useAppAPIs(appId);
 
-  if(!app.EXTERNAL_API__GET_EXTERNAL_ID_ROUTE){
-    throw new Error('app.EXTERNAL_API__GET_EXTERNAL_ID_ROUTE required')
+  if (!app.EXTERNAL_API__GET_EXTERNAL_ID_ROUTE) {
+    throw new Error("app.EXTERNAL_API__GET_EXTERNAL_ID_ROUTE required");
   }
 
   return await callExternalApi(
@@ -308,14 +343,11 @@ async function getExternalUserIdGivenAppAccountDetails(appId, accountDetails) {
  */
 async function getExternalToken(externalUserId, appId) {
   try {
-    let app = global.useAppDetails(
-      appId,
-      "getExternalToken"
-    );
-    const {callExternalApi} =  global.useAppAPIs(appId)
+    let app = global.useAppDetails(appId, "getExternalToken");
+    const { callExternalApi } = global.useAppAPIs(appId);
 
-    if(!app.EXTERNAL_API__GET_JWT_ROUTE){
-      throw new Error('app.EXTERNAL_API__GET_EXTERNAL_ID_ROUTE required')
+    if (!app.EXTERNAL_API__GET_JWT_ROUTE) {
+      throw new Error("app.EXTERNAL_API__GET_EXTERNAL_ID_ROUTE required");
     }
 
     const response = await callExternalApi(
