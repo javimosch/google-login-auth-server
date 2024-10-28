@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const { useGoogleAPI } = require("../config/google");
 const { useGitLabAPI } = require("../config/gitlab");
+const { useAuth0API } = require("../config/auth0");
+const { useKeycloakAPI } = require("../config/keycloak");
 
 router.get("/authorize/:providerId", (req, res) => {
   const providerId = req.params.providerId;
@@ -61,8 +63,12 @@ function handleOAuth(req, res, providerId) {
   //const state = encodeURIComponent(JSON.stringify({ appId: 'georedv3' }));
   //authUrlObj.searchParams.append('state', state);
 
+  
+
+  let clientParamName = authUrlObj.toString().includes('auth0')?'client':'client_id'
+
   const url = new URL(authUrlObj.toString());
-  url.searchParams.append("client_id", clientId);
+  url.searchParams.append(clientParamName, clientId);
   url.searchParams.append("redirect_uri", callbackUrl.toString());
   url.searchParams.append("response_type", "code");
   url.searchParams.append("scope", scope);
@@ -133,31 +139,49 @@ router.get("/callback/:providerId/:appId?", async (req, res) => {
     query: req.query,
   });
 
+  //process.exit(1)
+
   try {
     const { appId } = decodedState;
     let app = global.useAppDetails(appId, `/callback/${providerId}`);
 
     let payload, idpEmail;
 
-    if (providerId === "google") {
-      const { createGoogleClientByApp } = useGoogleAPI();
-      const { getGoogleDetailsGivenCode } = createGoogleClientByApp(
-        providerId,
-        appId
-      );
-      payload = await getGoogleDetailsGivenCode(code);
-      idpEmail = payload.email;
-    } else if (providerId === "gitlab") {
-      const { createGitLabClientByApp } = useGitLabAPI();
-      const { getGitLabDetailsGivenCode } = createGitLabClientByApp(
-        providerId,
-        appId
-      );
-      payload = await getGitLabDetailsGivenCode(code);
-      idpEmail = payload.email;
-    } else {
-      throw new Error(`Unsupported provider: ${providerId}`);
-    }
+if (providerId === "google") {
+  const { createGoogleClientByApp } = useGoogleAPI();
+  const { getGoogleDetailsGivenCode } = createGoogleClientByApp(
+    providerId,
+    appId
+  );
+  payload = await getGoogleDetailsGivenCode(code);
+  idpEmail = payload.email;
+} else if (providerId === "gitlab") {
+  const { createGitLabClientByApp } = useGitLabAPI();
+  const { getGitLabDetailsGivenCode } = createGitLabClientByApp(
+    providerId,
+    appId
+  );
+  payload = await getGitLabDetailsGivenCode(code);
+  idpEmail = payload.email;
+} else if (providerId === "auth0") {
+  const { createAuth0ClientByApp } = useAuth0API();
+  const { getDetailsGivenCode } = createAuth0ClientByApp(
+    providerId,
+    appId
+  );
+  payload = await getDetailsGivenCode(code);
+  idpEmail = payload.email;
+} else if (providerId === "keycloak") {
+  const { createKeycloakClientByApp } = useKeycloakAPI();
+  const { getKeycloakDetailsGivenCode } = createKeycloakClientByApp(
+    providerId,
+    appId
+  );
+  payload = await getKeycloakDetailsGivenCode(code);
+  idpEmail = payload.email;
+} else {
+  throw new Error(`Unsupported provider: ${providerId}`);
+}
 
     const linkDocument = await global.getUserLinkByEmail(
       providerId,
@@ -196,7 +220,7 @@ router.get("/callback/:providerId/:appId?", async (req, res) => {
   } catch (error) {
     console.error("Authentication error:", {
       error,
-      data: error.response.data,
+      data: error.response?.data||"",
     });
     res.render("error", {
       error: error.message,

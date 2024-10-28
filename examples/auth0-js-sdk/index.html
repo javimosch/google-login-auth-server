@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic HTML Template</title>
+</head>
+
+<body>
+    <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
+    <script>
+        let auth;
+
+        auth0.createAuth0Client({
+            domain: 'misitioba.eu.auth0.com',
+            clientId: 'MMfJCjmNeiu0dby32G38kj9wtRlA2pPa',
+            authorizationParams: {
+                redirect_uri: 'http://localhost:3000'
+            }
+        }).then(inst => {
+            auth = inst
+            setTimeout(() => {
+                login()
+            }, 1000)
+        })
+
+        async function login() {
+            try {
+                await auth.loginWithPopup({
+
+                });
+
+                try {
+                    let jwt = await auth.getTokenSilently();
+                    const user = await auth.getUser();
+                    console.log(user);
+
+                    // Extract redirect URL from query string
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const redirectUrl = urlParams.get('redirectUrl');
+
+                    // Check if redirectUrl is present and redirect user
+                    if (redirectUrl) {
+                        const userEmail = encodeURIComponent(user.email); // Encode email for URL usage
+                        window.location.href = `${redirectUrl}?user=${userEmail}`;
+                    }
+
+                } catch (error) {
+                    if (error.error !== 'login_required') {
+                        throw error;
+                    }
+                }
+
+            } catch (e) {
+
+                console.error({
+                    e
+                })
+            }
+        }
+
+
+
+    </script>
+</body>
+
+</html>

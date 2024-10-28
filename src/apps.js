@@ -47,7 +47,7 @@ for (let index in applications) {
   let appId = app.appId;
   for (let x in app) {
     if (!["appId"].includes(x)) {
-      console.log("CHECK",`${appId.toUpperCase()}__${x.toUpperCase()}`)
+      //console.log("CHECK",`${appId.toUpperCase()}__${x.toUpperCase()}`)
       if (process.env[`${appId.toUpperCase()}__${x.toUpperCase()}`]) {
         applications[index][x] = process.env[`${appId.toUpperCase()}__${x.toUpperCase()}`];
       }

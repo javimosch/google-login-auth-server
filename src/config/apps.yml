@@ -20,6 +20,15 @@ apps:
     redirect_url: "http://localhost:3000/auth/callback/google"
     scope: "profile email"
     auth_url: "https://accounts.google.com/o/oauth2/v2/auth"
+  keycloak:
+    openid_provider: true
+    client_id: "your-client-id"
+    client_secret: "your-client-secret"
+    redirect_url: "http://localhost:3000/auth/callback/keycloak"
+    scope: "openid profile email"
+    auth_url: "http://localhost:8085/realms/master/protocol/openid-connect/auth"
+    userinfo_endpoint: "http://localhost:8085/realms/master/protocol/openid-connect/userinfo"
+    token_endpoint: "http://localhost:8085/realms/master/protocol/openid-connect/token"
   gitlab:
     openid_provider: true
     client_id: ""
@@ -27,5 +36,13 @@ apps:
     redirect_url: "http://localhost:3000/auth/callback/gitlab"
     scope: "openid profile email api read_api"
     auth_url: "https://gitlab.com/oauth/authorize"
+  auth0:
+    openid_provider: true
+    client_id: "MMfJCjmNeiu0dby32G38kj9wtRlA2pPa"
+    client_secret: ""
+    audience: "https://misitioba.eu.auth0.com/api/v2/"
+    redirect_url: "http://localhost:3000/auth/callback/auth0"
+    scope: "openid profile email"
+    auth_url: "https://misitioba.eu.auth0.com/login"
 
 
