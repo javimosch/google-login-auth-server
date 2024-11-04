@@ -78,7 +78,8 @@ global.useAppAPIs = function (appId) {
       const externalAppApiKey = app.EXTERNAL_APP_API_KEY;
 
       console.log('callExternalApi',{
-        url:`${externalAppApiUrl}${relativePath}`
+        url:`${externalAppApiUrl}${relativePath}`,
+        payload
       })
       try {
         const config = {
@@ -107,9 +108,17 @@ global.useAppAPIs = function (appId) {
         })
         return response.data; // Return the data received from the API
       } catch (err) {
-        console.error("callExternalApi error:", { err:err.stack });
-        //throw err; // Rethrow the error for handling in the calling function
-        return null
+        if (err.response && err.response.status === 422) {
+          console.error("callExternalApi error:", {
+            status: err.response.status,
+            statusText: err.response.statusText,
+            data: err.response.data,
+          });
+        } else {
+          console.error("callExternalApi error:", { err: err.stack });
+        }
+        throw err; // Rethrow the error for handling in the calling function
+        //return null
       }
     },
   };

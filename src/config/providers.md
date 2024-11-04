@@ -28,6 +28,8 @@ authentication url example:
 
 ```sh
 http://localhost:8085/realms/master/protocol/openid-connect/auth?client_id=keycloak-demo-1&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauth%2Fcallback%2Fkeycloak%2Fgeoredv3&response_type=code&scope=openid%20profile%20email
+
+https://keycloak.coolify.intrane.fr/realms/master/protocol/openid-connect/auth?client_id=keycloak-demo-1&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fauth%2Fcallback%2Fkeycloak%2Fgeoredv3&response_type=code&scope=openid%20profile%20email
 ```
 
 # Adding new providers

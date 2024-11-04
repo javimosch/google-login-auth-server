@@ -1,13 +1,15 @@
 const { OAuth2Client } = require("google-auth-library");
-const axios = require("axios");
 
 function useGoogleAPI() {
   return {
-    createGoogleClientByApp(providerId,appId) {
+    createGoogleClientByApp(providerId, appId) {
+      console.log('Starting createGoogleClientByApp', { providerId, appId });
+
       let providerDetails = global.applications.find((a) => a.appId === providerId);
       let app = global.applications.find((a) => a.appId === appId);
+      
       if (!app) {
-        //@todo Redirect to view that says auth with app x not configured correctly
+        console.error('Invalid appId', { appId });
         throw new Error("createGoogleClientByApp: invalid appId: " + appId);
       }
 
@@ -15,41 +17,61 @@ function useGoogleAPI() {
       const clientSecret = providerDetails.client_secret;
       const redirectUri = providerDetails.redirect_url;
 
-      console.log('createGoogleClientByApp',{
+      console.log('Google OAuth configuration', {
         providerId,
         clientId,
-        redirectUri
-      })
+        redirectUri,
+        appId
+      });
 
       const redirectUriComputed = new URL(redirectUri);
-      //redirectUriComputed.searchParams.append("appId", appId);
-      const client = new OAuth2Client(clientId);
+      const fullRedirectUri = redirectUriComputed.toString() + '/' + appId;
+      console.log('Computed redirect URI', { fullRedirectUri });
+
+      const client = new OAuth2Client(clientId, clientSecret, fullRedirectUri);
+      console.log('OAuth2Client created');
 
       return {
         async getGoogleDetailsGivenCode(code) {
-          const tokenReqPayload= {
-            client_id: clientId,
-            client_secret: clientSecret,
-            code,
-            grant_type: "authorization_code",
-            redirect_uri: redirectUriComputed.toString()+'/'+appId,
+          console.log('Starting getGoogleDetailsGivenCode', { code: code.substring(0, 10) + '...' }); // Log only part of the code for security
+
+          try {
+            console.log('Exchanging code for tokens');
+            const { tokens } = await client.getToken(code);
+            console.log('Tokens received', { 
+              access_token: tokens.access_token ? 'Present' : 'Missing',
+              id_token: tokens.id_token ? 'Present' : 'Missing',
+              refresh_token: tokens.refresh_token ? 'Present' : 'Missing',
+              expiry_date: tokens.expiry_date
+            });
+
+            console.log('Setting credentials on OAuth2Client');
+            client.setCredentials(tokens);
+
+            console.log('Verifying ID token');
+            const ticket = await client.verifyIdToken({
+              idToken: tokens.id_token,
+              audience: clientId,
+            });
+
+            let payload = ticket.getPayload();
+            console.log('ID token verified, payload received', {
+              sub: payload.sub,
+              email: payload.email,
+              name: payload.name,
+              picture: payload.picture
+            });
+
+            return payload;
+          } catch (error) {
+            console.error('Error in getGoogleDetailsGivenCode:', error);
+            console.error('Error details:', {
+              name: error.name,
+              message: error.message,
+              stack: error.stack
+            });
+            throw error;
           }
-          console.log('getGoogleDetailsGivenCode',{
-            tokenReqPayload
-          })
-          const { data } = await axios.post(
-            "https://oauth2.googleapis.com/token",
-            tokenReqPayload
-          );
-          const ticket = await client.verifyIdToken({
-            idToken: data.id_token,
-            audience: clientId,
-          });
-          let payload = ticket.getPayload();
-          console.log('getGoogleDetailsGivenCode',{
-            payload
-          })
-          return payload;
         },
       };
     },
