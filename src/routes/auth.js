@@ -265,29 +265,51 @@ router.post("/link-google-account", async (req, res) => {
   console.log("/link-google-account", {
     body: req.body,
   });
-  let payload = req.body.payload; //from popup-login.ejs
+
+  let payload = req.body.payload; // from popup-login.ejs
   let appId = req.body.appId;
   let app = global.useAppDetails(appId, "/link-google-account");
   let { email: idpEmail } = payload;
-  let { externalId: externalUserId } =
-    await getExternalUserIdGivenAppAccountDetails(appId, payload);
 
-  //@todo Store/Retrieve google metadata from redis/cache
-  await linkExternalUser(
-    req.body.providerId,
-    appId,
-    externalUserId,
-    idpEmail,
-    {}
-  );
-  let token = await getExternalToken(externalUserId, appId);
+  try {
+    let { externalId: externalUserId } =
+      await getExternalUserIdGivenAppAccountDetails(appId, payload);
 
-  let response = {
-    redirectUrl: app.EXTERNAL_APP_URL + "/?_token=" + token,
-    token,
-  };
-  res.json(response);
+    //@todo Store/Retrieve google metadata from redis/cache
+    await linkExternalUser(
+      req.body.providerId,
+      appId,
+      externalUserId,
+      idpEmail,
+      {}
+    );
+    
+    let token = await getExternalToken(externalUserId, appId);
+
+    let response = {
+      redirectUrl: app.EXTERNAL_APP_URL + "/?_token=" + token,
+      token,
+    };
+  
+    res.json(response);
+  } catch (error) {
+    if (error.response && error.response.status === 422) {
+      // If it's a 422 error, respond with the error message
+      return res.status(422).json({
+        error: 'Unprocessable Entity',
+        details: error.response.data, // Send back the response data if available
+      });
+    } else {
+      // Handle other errors (optional)
+      console.error("Error linking account:", error);
+      return res.status(500).json({
+        error: 'Internal Server Error',
+        message: error.message,
+      });
+    }
+  }
 });
+
 
 /**
  * Helper to call an external app API route to get a user identifier given Google email and account details.
@@ -379,6 +401,7 @@ async function getExternalToken(externalUserId, appId) {
       app.EXTERNAL_API__GET_JWT_ROUTE,
       {
         externalUserId,
+        externalId: externalUserId//Remove this once APIV3 is iso with the API spec
       }
     );
 
