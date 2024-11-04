@@ -58,7 +58,7 @@ The params received could change given the EXTERNAL_APP_LINK_FIELDS configured f
           - **Properties**: 
             - `externalId`: 
               - **Type**: string
-              - **Description**: A string combining userId and clientId (formatted as `userId_clientId`).
+              - **Description**: A string combining userId and clientId (formatted as `clientId_userId`).
   - **400**: 
     - **Description**: Missing required parameters.
     - **Content**: 
@@ -103,12 +103,12 @@ The params received could change given the EXTERNAL_APP_LINK_FIELDS configured f
 ### 3.2 Get JWT by Google Email
 
 - **Endpoint**: `GET /ssoauth/get_jwt`
-- **Description**: This endpoint retrieves a JWT token for a user based on their external user ID, which combines the user ID and client ID in the format `userId_clientId`.
+- **Description**: This endpoint retrieves a JWT token for a user based on their external user ID, which combines the user ID and client ID in the format `clientId_userId`.
 - **Query Parameter**: 
-  - `externalUserId`: 
+  - `externalId`: 
     - **Type**: string
     - **Required**: true
-    - **Description**: The external user ID consisting of userId and clientId in the format `userId_clientId`.
+    - **Description**: The external user ID consisting of userId and clientId in the format `clientId_userId`.
 - **Responses**: 
   - **200**: 
     - **Description**: Successful JWT token generation.
@@ -121,7 +121,7 @@ The params received could change given the EXTERNAL_APP_LINK_FIELDS configured f
               - **Type**: string
               - **Description**: The generated JWT token.
   - **400**: 
-    - **Description**: Missing or invalid `externalUserId` format.
+    - **Description**: Missing or invalid `externalId` format.
     - **Content**: 
       - `application/json`: 
         - **Schema**: 
@@ -129,7 +129,7 @@ The params received could change given the EXTERNAL_APP_LINK_FIELDS configured f
           - **Properties**: 
             - `error`: 
               - **Type**: string
-              - **Description**: Error message indicating invalid `externalUserId` format or missing parameters.
+              - **Description**: Error message indicating invalid `externalId` format or missing parameters.
   - **404**: 
     - **Description**: User not found based on the provided user ID.
     - **Content**: 
