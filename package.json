@@ -4,10 +4,9 @@
   "description": "Proof of Concept for integrating Google OAuth2 authentication with an external application",
   "main": "src/server.js",
   "scripts": {
-    "dev": "concurrently \"npx nodemon external-app/api\" \"npx nodemon src/server.js\"",
+    "dev": "npx nodemon src/server.js",
     "externalAppServer": "node external-app/api",
-    "start": "node src/server.js",
-    "startAll": "concurrently \"node external-app/api\" \"node src/server.js\""
+    "start": "node src/server.js"
   },
   "dependencies": {
     "axios": "^1.7.7",
@@ -22,8 +21,5 @@
     "mongoose": "^8.7.0",
     "nodemon": "^3.0.0",
     "sqlite3": "^5.1.7"
-  },
-  "devDependencies": {
-    "concurrently": "^7.0.0"
   }
 }
