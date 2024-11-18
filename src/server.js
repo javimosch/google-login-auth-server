@@ -4,11 +4,11 @@ const app = express();
 const authRoutes = require('./routes/auth');
 const indexRoutes = require('./routes/index');
 const db = require('./config/db'); // Import the database connection logic
-require('./apps'); // Load applications from apps.js
+const apps = require('./apps'); // Load applications from apps.js
 
 //Print applications configurations while hidding sensitive fields
 console.log({
-    applications:[...global.applications].map(a=>{
+    apps:apps.map(a=>{
         let b = {...a}
         for(let x in b){
             b[x] = x.toLowerCase().includes('secret')||x.toLowerCase().includes('key') ? '***':b[x]
