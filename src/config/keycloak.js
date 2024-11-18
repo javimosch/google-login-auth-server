@@ -3,43 +3,50 @@ const axios = require("axios");
 function useKeycloakAPI() {
   return {
     createKeycloakClientByApp(providerId, appId) {
-      let providerDetails = global.applications.find((a) => a.appId === providerId);
-      let app = global.applications.find((a) => a.appId === appId);
+      let providerDetails = global.useAppDetails(providerId, 'keycloak');
+      let app = global.useAppDetails(appId, 'keycloak');
       if (!app) {
         throw new Error("createKeycloakClientByApp: invalid appId: " + appId);
       }
 
-      const clientId = providerDetails.client_id;
-      const clientSecret = providerDetails.client_secret;
-      const redirectUri = providerDetails.redirect_url;
-      const tokenEndpoint = providerDetails.token_endpoint;
-      const userInfoEndpoint = providerDetails.userinfo_endpoint;
+      const clientId = providerDetails.clientId;
+      const clientSecret = providerDetails.clientSecret;
+      const redirectUri = providerDetails.redirectUrl;
+      const tokenEndpoint = providerDetails.tokenEndpoint;
+      const userInfoEndpoint = providerDetails.userinfoEndpoint;
 
       console.log('createKeycloakClientByApp', {
         providerId,
         clientId,
-        redirectUri
+        redirectUri,
+        tokenEndpoint,
+        userInfoEndpoint
       });
 
       const redirectUriComputed = new URL(redirectUri);
+      const fullRedirectUri = redirectUriComputed.toString() + '/' + appId;
 
       return {
         async getKeycloakDetailsGivenCode(code) {
+          console.log('Keycloak getDetailsGivenCode - Starting with code:', code.substring(0, 10) + '...');
+
           const tokenReqPayload = {
             client_id: clientId,
             client_secret: clientSecret,
             code,
             grant_type: "authorization_code",
-            redirect_uri: redirectUriComputed.toString() + '/' + appId,
+            redirect_uri: fullRedirectUri,
           };
 
-          console.log('getKeycloakDetailsGivenCode', {
-            tokenReqPayload
+          console.log('Token Request Parameters:', {
+            ...tokenReqPayload,
+            client_secret: '***',
+            endpoint: tokenEndpoint
           });
 
           try {
-            // Exchange code for tokens
-            const { data: tokenData } = await axios.post(
+            console.log('Requesting token from Keycloak...');
+            const tokenResponse = await axios.post(
               tokenEndpoint,
               new URLSearchParams(tokenReqPayload),
               {
@@ -49,20 +56,57 @@ function useKeycloakAPI() {
               }
             );
 
+            console.log('Token Response Status:', tokenResponse.status);
+            console.log('Token Response Headers:', tokenResponse.headers);
+            console.log('Access Token Received:', tokenResponse.data.access_token ? 'Yes' : 'No');
+            console.log('Full Token Response:', {
+              ...tokenResponse.data,
+              access_token: tokenResponse.data.access_token ? '[PRESENT]' : '[MISSING]',
+              refresh_token: tokenResponse.data.refresh_token ? '[PRESENT]' : '[MISSING]'
+            });
+
+            const accessToken = tokenResponse.data.access_token;
+            if (!accessToken) {
+              throw new Error('No access token received from Keycloak');
+            }
+
             // Use the access token to get user info
-            const { data: userData } = await axios.get(userInfoEndpoint, {
+            console.log('Requesting user info with access token...');
+            console.log('User Info Request Headers:', {
+              'Authorization': `Bearer ${accessToken}`,
+              'Endpoint': userInfoEndpoint
+            });
+
+            const userResponse = await axios.get(userInfoEndpoint, {
               headers: {
-                'Authorization': `Bearer ${tokenData.access_token}`
+                'Authorization': `Bearer ${accessToken}`
               }
             });
 
-            console.log('getKeycloakDetailsGivenCode', {
-              userData
+            console.log('User Info Response Status:', userResponse.status);
+            console.log('User Info Response Headers:', userResponse.headers);
+            console.log('User Info Data:', {
+              ...userResponse.data,
+              sub: userResponse.data.sub || '[MISSING]',
+              email: userResponse.data.email || '[MISSING]'
             });
 
-            return userData;
+            return {
+              email: userResponse.data.email,
+              name: userResponse.data.name,
+              picture: userResponse.data.picture,
+              sub: userResponse.data.sub
+            };
           } catch (error) {
-            console.error('Error in Keycloak authentication:', error);
+            console.error('Keycloak API Error:', {
+              phase: error.config?.url.includes('token') ? 'Token Request' : 'User Info Request',
+              status: error.response?.status,
+              statusText: error.response?.statusText,
+              data: error.response?.data,
+              headers: error.response?.headers,
+              message: error.message,
+              requestHeaders: error.config?.headers
+            });
             throw error;
           }
         },

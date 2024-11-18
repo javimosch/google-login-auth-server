@@ -1,14 +1,11 @@
 const axios = require("axios");
 const crypto = require('crypto');
 
-
 function useAuth0API() {
   return {
     createAuth0ClientByApp(providerId, appId) {
-      let providerDetails = global.applications.find(
-        (a) => a.appId === providerId
-      );
-      let app = global.applications.find((a) => a.appId === appId);
+      let providerDetails = global.useAppDetails(providerId, 'auth0');
+      let app = global.useAppDetails(appId, 'auth0');
       if (!app) {
         throw new Error("createAuth0ClientByApp: invalid appId: " + appId);
       }
@@ -18,51 +15,89 @@ function useAuth0API() {
         app,
       });
 
-      const clientId = providerDetails.client_id;
-      const clientSecret = providerDetails.client_secret;
+      const clientId = providerDetails.clientId;
+      const clientSecret = providerDetails.clientSecret;
       const audience = providerDetails.audience;
 
-      const redirectUriComputed = new URL(providerDetails.redirect_url);
+      const redirectUriComputed = new URL(providerDetails.redirectUrl);
       redirectUriComputed.searchParams.append("appId", appId);
       const redirectUri = redirectUriComputed.toString();
-
 
       function base64URLEncode(str) {
         return str.toString('base64')
             .replace(/\+/g, '-')
             .replace(/\//g, '_')
             .replace(/=/g, '');
-    }
-    var verifier = base64URLEncode(crypto.randomBytes(32));
-
+      }
+      var verifier = base64URLEncode(crypto.randomBytes(32));
 
       return {
         async getDetailsGivenCode(code) {
+          console.log('Auth0 getDetailsGivenCode - Starting with code:', code.substring(0, 10) + '...');
+          
+          const params = {
+            client_id: clientId,
+            redirect_uri: redirectUri,
+            code_verifier: verifier,
+            code: code,
+            grant_type: "authorization_code",
+          };
+
+          console.log('Token Request Parameters:', {
+            ...params,
+            client_id: clientId,
+            client_secret: '***'
+          });
+
           try {
-            const response = await axios.post(
+            console.log('Requesting token from Auth0...');
+            const tokenResponse = await axios.post(
               "https://misitioba.eu.auth0.com/oauth/token",
-              null,
+              new URLSearchParams(params),
               {
                 headers: {
-                  accept: "*/*",
-                  "content-type": "application/x-www-form-urlencoded",
-                },
-                params: {
-                  client_id: clientId,
-                  redirect_uri: redirectUri,
-                  code_verifier:verifier,// "9AaxJN9BnpBpLa6G6se9HPXf8pCD0VeeRMkB6GK97Vj", // This should be dynamic based on the application's requirements
-                  code: code,
-                  grant_type: "authorization_code",
-                },
+                  'Content-Type': 'application/x-www-form-urlencoded'
+                }
               }
             );
-            console.log('TRACE',{
-                data: response.data
-            })
-            return response.data; // Returns the response data which usually contains access token and other details
+
+            console.log('Token Response Status:', tokenResponse.status);
+            console.log('Token Response Headers:', tokenResponse.headers);
+            console.log('Access Token Received:', tokenResponse.data.access_token ? 'Yes' : 'No');
+            console.log('Full Token Response:', {
+              ...tokenResponse.data,
+              access_token: tokenResponse.data.access_token ? '[PRESENT]' : '[MISSING]',
+              id_token: tokenResponse.data.id_token ? '[PRESENT]' : '[MISSING]'
+            });
+
+            // Get user info using the access token
+            console.log('Requesting user info with access token...');
+            const userInfoResponse = await axios.get('https://misitioba.eu.auth0.com/userinfo', {
+              headers: {
+                'Authorization': `Bearer ${tokenResponse.data.access_token}`
+              }
+            });
+
+            console.log('User Info Response Status:', userInfoResponse.status);
+            console.log('User Info Response Headers:', userInfoResponse.headers);
+            console.log('User Info Data:', {
+              ...userInfoResponse.data,
+              sub: userInfoResponse.data.sub || '[MISSING]',
+              email: userInfoResponse.data.email || '[MISSING]'
+            });
+
+            return userInfoResponse.data;
           } catch (error) {
-            console.error("Error getting details given code", error);
-            throw error; // You may want to throw a custom error or handle it accordingly based on your application's error handling strategy
+            console.error('Auth0 API Error:', {
+              phase: error.config?.url.includes('token') ? 'Token Request' : 'User Info Request',
+              status: error.response?.status,
+              statusText: error.response?.statusText,
+              data: error.response?.data,
+              headers: error.response?.headers,
+              message: error.message,
+              requestHeaders: error.config?.headers
+            });
+            throw error;
           }
         },
         async getAuth0AccountDetailsGivenEmail(email) {
@@ -150,9 +185,9 @@ async function requestJWT(
     const response = await axios.post(
       "https://misitioba.eu.auth0.com/oauth/token",
       new URLSearchParams({
-        grant_type: "client_credentials",
-        client_id: clientId,
-        client_secret: clientSecret,
+        grantType: "client_credentials",
+        clientId: clientId,
+        clientSecret: clientSecret,
         audience,
       }),
       {

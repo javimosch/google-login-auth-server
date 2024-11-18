@@ -5,17 +5,22 @@ function useGoogleAPI() {
     createGoogleClientByApp(providerId, appId) {
       console.log('Starting createGoogleClientByApp', { providerId, appId });
 
-      let providerDetails = global.applications.find((a) => a.appId === providerId);
-      let app = global.applications.find((a) => a.appId === appId);
+      let providerDetails = global.useAppDetails(providerId, 'google');
+      let app = global.useAppDetails(appId, 'google');
       
       if (!app) {
         console.error('Invalid appId', { appId });
         throw new Error("createGoogleClientByApp: invalid appId: " + appId);
       }
 
-      const clientId = providerDetails.client_id;
-      const clientSecret = providerDetails.client_secret;
-      const redirectUri = providerDetails.redirect_url;
+      console.log({
+        app,
+        providerDetails
+      })
+
+      const clientId = providerDetails.clientId;
+      const clientSecret = providerDetails.clientSecret;
+      const redirectUri = providerDetails.redirectUrl;
 
       console.log('Google OAuth configuration', {
         providerId,
@@ -39,10 +44,10 @@ function useGoogleAPI() {
             console.log('Exchanging code for tokens');
             const { tokens } = await client.getToken(code);
             console.log('Tokens received', { 
-              access_token: tokens.access_token ? 'Present' : 'Missing',
-              id_token: tokens.id_token ? 'Present' : 'Missing',
-              refresh_token: tokens.refresh_token ? 'Present' : 'Missing',
-              expiry_date: tokens.expiry_date
+              accessToken: tokens.access_token ? 'Present' : 'Missing',
+              idToken: tokens.id_token ? 'Present' : 'Missing',
+              refreshToken: tokens.refresh_token ? 'Present' : 'Missing',
+              expiryDate: tokens.expiry_date
             });
 
             console.log('Setting credentials on OAuth2Client');
