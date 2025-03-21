@@ -1,0 +1,205 @@
+version: '3'
+
+silent: true
+
+# default environment variables
+env:
+  RELEASE_NAME: 'development'
+  RELEASE_TIMESTAMP: ''
+  SENTRY_WEBPACK_PLUGIN_DEBUG: ''
+
+tasks:
+  proxy.create_network:
+    desc: 'Create the traefik network'
+    internal: true
+    cmds:
+      - docker network create traefik_proxy 2> /dev/null || true
+
+  # install traefik as reverse proxy
+  proxy.install:
+    internal: true
+    cmds:
+      - sh -c  '[ -f /.dockerenv ] && echo "Docker env, pass" || ([ -d ~/projets/traefik/.git ] && echo "traefik is installed ✅" || (echo "Installing traefik" && git clone ssh://git@git.geored.fr:220/RD_soft/traefik.git ~/projets/traefik))'
+    ignore_error: true
+
+  # start traefik as reverse proxy
+  proxy.start:
+    desc: 'Proxy start'
+    internal: true
+    deps:
+      - proxy.install
+      - proxy.create_network
+    cmds:
+      - sh -c '[ -f /.dockerenv ] && echo "Docker env, pass" || cd ~/projets/traefik && task start'
+
+  npm.audit:
+    aliases:
+      - audit
+    desc: 'Run the security audit'
+    cmds:
+      - docker compose run --rm dev npm audit
+
+  npm.audit.fix:
+    aliases:
+      - audit:fix
+    desc: 'Run the security audit and fix the vulnerabilities'
+    cmds:
+      - docker compose run --rm dev npm audit fix
+
+  npm.build:
+    aliases:
+      - build
+    desc: 'Build the project'
+    cmds:
+      - docker compose run --rm dev npm run build
+
+  npm.build.report:
+    aliases:
+      - build-report
+    desc: 'Build the project with report'
+    cmds:
+      - docker compose run --rm dev npm run build-report
+
+  npm.format:
+    aliases:
+      - format
+    desc: 'Run the formatter'
+    cmds:
+      - docker compose run --rm dev npm run format
+
+  # run npm install
+  npm.init:
+    aliases:
+      - init
+    desc: 'Perform a npm install'
+    cmds:
+      - docker compose run --rm dev npm install
+
+  npm.lint:
+    aliases:
+      - lint
+    desc: 'Run the linter'
+    cmds:
+      - docker compose run --rm dev npm run lint
+
+  npm.lint.watch:
+    aliases:
+      - lint:watch
+    desc: 'Run the linter in watch mode'
+    cmds:
+      - docker compose run --rm dev npm run lint:watch
+
+  install:
+    desc: 'Install the project'
+    aliases:
+      - i
+    deps:
+      - proxy.create_network
+    cmds:
+      - task npm.init
+      - task env.cidev
+
+  # start the development server
+  container.start:
+    desc: "🚀 \e[32mDémarrer le projet\e[0m"
+    aliases:
+      - up
+      - start
+    deps:
+      - proxy_start
+    cmds:
+      - docker compose up -d --force-recreate --renew-anon-volumes --remove-orphans dev
+      - sleep 2s && xdg-open "https://localhost" 1> /dev/null 2> /dev/null
+
+  keycloak.start:
+    desc: "🚀 \e[32mDémarrer keycloak\e[0m"
+    aliases:
+      - keyclock-up
+      - keycloak-start
+    cmds:
+      - docker compose up -d --force-recreate --renew-anon-volumes --remove-orphans keycloak
+
+  container.build:
+    desc: 'Rebuild the project'
+    aliases:
+      - build
+    cmds:
+      - docker compose build --pull
+
+  container.down:
+    desc: "🛑 stop and delete container\e[0m"
+    aliases:
+      - down
+      - stop
+    cmds:
+      - docker compose down
+
+  container.sh:
+    aliases:
+      - sh
+      - bash
+    desc: "Lancer un shell dans le container node"
+    cmds:
+      - docker compose exec dev sh
+
+
+  env.dev:
+    desc: 'Set the environment to development'
+    aliases:
+      - dev
+    cmds:
+      - cp .env.development .env.localhost
+
+  env.cidev:
+    desc: 'Set the environment to cidev'
+    aliases:
+      - cidev
+    cmds:
+      - cp .env.cidev .env.localhost
+
+  env.isoprod:
+    desc: 'Set the environment to isoprod'
+    aliases:
+      - isoprod
+    cmds:
+      - cp .env.isoprod .env.localhost
+
+  container.status:
+    desc: "🔍 \e[33mStatus of the container\e[0m"
+    aliases:
+      - status
+      - ps
+      - st
+    cmds:
+      - docker compose ps
+
+  container.logs:
+    desc: "📜 \e[33mShow logs\e[0m"
+    aliases:
+      - logs
+    cmds:
+      - docker compose logs -f
+
+  deploy-script.build:
+    desc: "Build the project for deployment"
+    cmds:
+      - RELASE_ENV="{{.CLI_ARGS}}" && [ -z ${RELASE_ENV} ] && echo -e "Please provide an environment\nUsage :\n >> task deploy-script.build -- <ENV>" && exit 1 || echo "Building the project for deployment for ENV=${RELASE_ENV}"
+      - RELASE_ENV={{.CLI_ARGS}} docker compose -f compose.release.yml run --rm --remove-orphans build sh -c "rm -rf dist; npm install ; npm run build -- --mode={{.CLI_ARGS}}"
+
+  deploy-script:
+    desc: "Build and extract the project for deployment"
+    cmds:
+      - task deploy-script.build -- {{.CLI_ARGS}}
+
+
+  help:
+    desc: 'Print this help'
+    cmds:
+      - task --list
+      - echo -e "\n\t\e[33mAfter a clone of this project, you can run.\e[0m"
+      - echo -e "\n\t\t $ \e[32mtask install up logs\e[0m\n"
+
+  # init dependencies and start the development server
+  default:
+    cmds:
+      - task help

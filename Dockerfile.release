@@ -1,0 +1,13 @@
+ARG NODE_VERSION
+
+FROM node:${NODE_VERSION} as node_build
+
+WORKDIR /home/node/app
+COPY . /home/node/app/
+
+RUN npm install && npm run build --mode=${RELASE_ENV}
+
+
+FROM nginx:stable-alpine as release
+
+COPY --from=node_build /home/node/app/dist /usr/share/nginx/html

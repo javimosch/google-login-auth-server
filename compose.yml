@@ -1,0 +1,114 @@
+---
+services:
+  node:
+    image: ${NODE_IMAGE}:${NODE_VERSION}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: node_base
+      args:
+        - NODE_VERSION=${NODE_VERSION}
+    user: 'node'
+    working_dir: /home/node/app
+    environment:
+      - NODE_ENV=production
+      - TZ=Europe/Paris
+      - VUE_APP_RELEASE_NAME=${RELEASE_NAME}
+      - VUE_APP_RELEASE_TIMESTAMP=${RELEASE_TIMESTAMP}
+      - SENTRY_WEBPACK_PLUGIN_DEBUG=${SENTRY_WEBPACK_PLUGIN_DEBUG}
+    volumes:
+      - ./:/home/node/app
+    env_file:
+      - .env
+    networks:
+      - sso
+
+  dev:
+    image: ${NODE_IMAGE}:${NODE_VERSION}
+    user: 'node'
+    working_dir: /home/node/app
+    environment:
+      - NODE_ENV=development
+      - TZ=Europe/Paris
+      - VUE_APP_RELEASE_NAME=${RELEASE_NAME}
+      - VUE_APP_RELEASE_TIMESTAMP=${RELEASE_TIMESTAMP}
+      - SENTRY_WEBPACK_PLUGIN_DEBUG=${SENTRY_WEBPACK_PLUGIN_DEBUG}
+    volumes:
+      - ./:/home/node/app
+    command: ['npm', 'run', 'start']
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--spider", "http://localhost:3000"]
+      start_period: 2s
+      interval: 30s
+      timeout: 2s
+      retries: 5
+    depends_on:
+      - mongo
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.sso.rule=Host(`sso.dev.localhost`)'
+      - 'traefik.http.services.sso-service.loadbalancer.server.port=3000'
+      - 'traefik.http.routers.sso-secure.rule=Host(`sso.dev.localhost`)'
+      - 'traefik.http.routers.sso-secure.tls=true'
+      - 'traefik.docker.network=traefik_proxy'
+    networks:
+      - sso
+      - traefik_proxy
+
+
+  mongo:
+    build:
+      context: ./docker/mongo
+    image: ${MONGO_IMAGE}
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: sabroot
+    ports:
+      - target: 27017
+        published: 27020
+        protocol: tcp
+    volumes:
+      - mongo-data:/var/lib/mongo
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=false"
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    labels:
+      - "traefik.enable=false"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.1
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: password
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: localhost
+    ports:
+      - "8085:8080"
+    labels:
+      - 'traefik.enable=false'
+    depends_on:
+      - postgres
+    command: start-dev
+
+networks:
+  sso:
+  traefik_proxy:
+    external: true
+
+volumes:
+    mongo-data: {}
+    postgres_data:

@@ -1,0 +1,247 @@
+variables:
+  GIT_SSL_NO_VERIFY: "1"
+  COMPOSE_INTERACTIVE_NO_CLI: 1
+  MESSAGE_SUCCESS: "SUCCESS"
+
+include:
+  - local: '/.env.gitlab.yml'
+
+stages:
+- setup
+- test
+- build
+- deploy
+- pre-release
+- release
+
+# Prepare pull of docker image and set variables for docker on kubernettes
+.kubernettes-docker:
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+  - until docker info > /dev/null 2> /dev/null; do sleep 1; done
+  - mkdir .ssh
+  - mv $SSH_KNOWN_HOSTS  .ssh/known_hosts
+  - mv $SSH_PRIVATE_KEY  .ssh/id_rsa
+  - mv $SSH_PUB_KEY      .ssh/id_rsa.pub
+  - chmod 0600 .ssh/*
+  - chown -R 1000:1000 .ssh
+  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  - source .env
+  - docker compose pull || true
+  - docker network create traefik_proxy
+  tags:
+  - clusterv2
+
+
+.node-image:
+  image: $NODE_IMAGE:$NODE_VERSION
+  variables:
+    NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/.npm"
+  cache:
+    key:
+      files:
+      - package-lock.json
+    paths:
+    - .npm
+    policy: pull
+  before_script:
+  - cd $CI_PROJECT_DIR
+  - npm ci --legacy-peer-deps
+  tags:
+  - clusterv2
+
+
+.on-deployment:
+  variables:
+    GIT_STRATEGY: none
+    GIT_CLONE_PATH: ""
+  stage: deploy
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - cd ~/deploy
+  tags:
+  - deployv3
+
+
+# launch test only for merge_requests and some branches
+.on-merge-request:
+  rules:
+    - if: '$CI_MERGE_REQUEST_ID'
+      when: on_success
+    - when: never
+
+docker.build:
+  stage: .pre
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  rules:
+    - if: '$BUILD_NODE_IMAGE == "1"'
+      when: manual
+    - if: '$CI_MERGE_REQUEST_ID || $CI_COMMIT_BRANCH'
+      changes:
+          - .env
+          - Dockerfile
+      when: on_success
+    - when: never
+  script:
+    - source $PWD/.env
+    - /kaniko/executor
+      --build-arg "NODE_VERSION='${NODE_VERSION}'"
+      --cache
+      --cache-repo=${CI_REGISTRY_IMAGE}/cache_geored
+      --context "${CI_PROJECT_DIR}"
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --target node_base
+      --destination "${NODE_IMAGE}:${NODE_VERSION}"
+  tags:
+    - clusterv2
+
+
+setup:
+  stage: setup
+  extends:
+  - .node-image
+  - .on-merge-request
+  cache:
+    policy: pull-push
+  script:
+  - echo 'Running npm run build'
+  - npm run build -- --mode isoprod
+
+lint:
+  stage: test
+  extends:
+  - .node-image
+  - .on-merge-request
+  script:
+  - npm run-script lint
+
+################
+# deploiements #
+################
+dev:
+  only:
+  - dev
+  extends:
+  - .on-deployment
+  script:
+  - fab conf:login_sso_dev deploy
+  environment:
+    name: dev
+    url: https://dev-sso.geored.fr
+
+recette:
+  only:
+  - recette
+  extends:
+  - .on-deployment
+  script:
+  - fab conf:login_sso_recette deploy
+  environment:
+    name: recette
+    url: https://recette-sso.geored.fr
+
+isoprod:
+  only:
+  - isoprod
+  extends:
+  - .on-deployment
+  script:
+  - fab conf:login_sso_isoprod deploy
+  environment:
+    name: isoprod
+    url: https://isoprod-sso.geored.fr
+
+preprod-mongo:
+  only:
+  - preprod-mongo
+  extends:
+  - .on-deployment
+  script:
+  - fab conf:login_sso_preprodmongo deploy
+
+
+# Preprod deployment
+preprod_pre-release:
+  stage: pre-release
+  rules:
+  - if: '$CI_COMMIT_TAG =~ /^(\d*).(\d*).(\d*)-RC(\d*)$/'
+    when: on_success
+  extends:
+  - .on-deployment
+  script:
+  - fab conf:login_sso_preprod verify_version:$CI_COMMIT_TAG deploy_prerelease
+
+preprod_release:
+  stage: release
+  rules:
+  - if: '$CI_COMMIT_TAG =~ /^(\d*).(\d*).(\d*)-RC(\d*)$/'
+    when: manual
+  extends:
+  - .on-deployment
+  script:
+  - fab conf:login_sso_preprod verify_version:$CI_COMMIT_TAG rolling
+
+# Production deployment
+prod_pre-release:
+  stage: pre-release
+  rules:
+  - if: '$CI_COMMIT_TAG =~ /^(\d+).(\d+).(\d+)$/'
+    when: on_success
+  extends:
+  - .on-deployment
+  script:
+  - fab conf:login_sso_prod verify_version:$CI_COMMIT_TAG deploy_prerelease
+  environment:
+    name: preprod
+    url: http://preprod-sso.geosab.eu
+
+prod_release:
+  stage: release
+  rules:
+  - if: '$CI_COMMIT_TAG =~ /^(\d+).(\d+).(\d+)$/'
+    when: manual
+  extends:
+  - .on-deployment
+  script:
+  - fab conf:login_sso_prod verify_version:$CI_COMMIT_TAG rolling
+  environment:
+    name: prod
+    url: https://www3.geored-online.com
+
+# build image for staging environment
+app_release_docker:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  only:
+  # - isoprod
+  # - recette
+  # - dev
+  - GEO-41982
+  environment:
+    name: $CI_COMMIT_REF_SLUG
+    url: https://$CI_ENVIRONMENT_SLUG-apiv3.geored.fr
+  script:
+  # from gitlab variables we should get the configuration.
+  - if [ ! -f "$CUSTOM_ENV_FILE" ]; then echo "No CUSTOM_ENV_FILE configured"; exit 1; fi
+  # move the custom env file to .env.custom
+  - mv $CUSTOM_ENV_FILE .env.custom
+  # source the custom env file
+  - export RELASE_ENV=.env.custom
+  - source $PWD/.env.custom
+  # build the image with cache
+  - /kaniko/executor
+    --cache
+    --cache-repo=${CI_REGISTRY_IMAGE}/cache_app
+    --context "${CI_PROJECT_DIR}/"
+    --dockerfile "${CI_PROJECT_DIR}/Dockerfile.release"
+    --target release
+    --destination "${CI_REGISTRY_IMAGE}/app-${CI_COMMIT_REF_SLUG}:latest"
+  tags:
+  - clusterv2

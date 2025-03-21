@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "npx nodemon src/server.js",
     "externalAppServer": "node external-app/api",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "lint": "eslint --ext .js,.vue --ignore-path .gitignore --fix src",
+    "lint:watch": "npx nodemon --exec 'npm run lint' -e js,vue"
   },
   "dependencies": {
     "axios": "^1.7.7",

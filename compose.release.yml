@@ -1,0 +1,26 @@
+---
+services:
+  release:
+    build:
+      context: ./
+      target: release
+      args:
+        - NODE_VERSION=${NODE_VERSION}
+        - RELASE_ENV=${RELASE_ENV}
+    image: ${NODE_IMAGE}:${NODE_VERSION}
+    env_file:
+      - .env
+  build:
+    build:
+      context: ./
+      target: node_base
+      args:
+        - NODE_VERSION=${NODE_VERSION}
+        - RELASE_ENV=${RELASE_ENV}
+      pull: true
+    image: ${NODE_IMAGE}:${NODE_VERSION}
+    working_dir: /home/node/app
+    volumes:
+      - ./:/home/node/app
+    env_file:
+      - .env

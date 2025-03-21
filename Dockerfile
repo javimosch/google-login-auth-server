@@ -1,20 +1,23 @@
-# Use the official Node.js image with Alpine
-FROM node:alpine
+ARG NODE_VERSION
 
-# Set the working directory
-WORKDIR /usr/src/app
+FROM node:${NODE_VERSION} AS node_base
 
-# Copy package.json and package-lock.json
-COPY package*.json ./
+ENV TZ=Europe/Paris
+USER root
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo "$TZ" > /etc/timezone
+USER node
 
-# Install dependencies
-RUN npm install
+FROM node:${NODE_VERSION} AS node_build
 
-# Copy the rest of the application code
-COPY . .
+WORKDIR /home/node/app
+COPY . /home/node/app/
 
-# Expose the port the app runs on
-EXPOSE 3000
+RUN npm install && \
+    npm run build --mode=${RELASE_ENV}
 
-# Command to run the application
-CMD [ "npm", "run", "start" ]
+
+FROM nginx:stable-alpine AS release
+
+COPY --from=node_build /home/node/app/dist /usr/share/nginx/html
