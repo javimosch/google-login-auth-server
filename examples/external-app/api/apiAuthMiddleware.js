@@ -11,7 +11,7 @@ module.exports = apiAuthMiddleware
 function apiAuthMiddleware(req, res, next){
     const authHeader = req.headers['authorization'];
     const apiKeyHeader = req.headers['authorization-key'];
-    const validApiKey = process.env.MICROSERVICE_GOOGLELOGIN_API_KEY;
+    const validApiKey = process.env.MICROSERVICE_SSOLOGIN_API_KEY;
 
     // Check for Bearer token
     if (authHeader && authHeader.startsWith('Bearer ')) {

@@ -3,7 +3,8 @@ const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const Chance = require("chance");
 const apiAuthMiddleware = require("./apiAuthMiddleware");
-
+const fs = require('fs')
+const path = require('path')
 const jwt = require("jsonwebtoken");
 
 // Initialize Chance
@@ -36,6 +37,8 @@ const port = 3001;
 
 // Setup SQLite Database using a file
 const dbFilePath = "./tmp/database.sqlite";
+const dbDirPath = path.dirname(dbFilePath);
+fs.mkdirSync(dbDirPath, { recursive: true });
 const db = new sqlite3.Database(dbFilePath, (err) => {
   if (err) {
     console.error(err.message);
@@ -225,7 +228,7 @@ migrateData();
 
 /**
  * @swagger
- * /googleauth/external-id:
+ * /ssoauth/external-id:
  *   post:
  *     summary: Get external identifier by username and client name
  *     description: Retrieve the external user identifier based on the provided username, client name, and password (mock).
@@ -295,19 +298,21 @@ migrateData();
  *               properties:
  *                 error:
  */
-app.post("/googleauth/external-id", apiAuthMiddleware, async (req, res) => {
+app.post("/ssoauth/external-id", apiAuthMiddleware, async (req, res) => {
   const { username, clientName, password } = req.body; // Accept password
 
-  console.log("/googleauth/external-id", { username, clientName, password }); // Log for debugging
+  console.log("/ssoauth/external-id", { username, clientName, password }); // Log for debugging
 
   // Validate required fields
   if (!username || !clientName) {
+    console.log('400',"Username and clientName are required.")
     return res.status(400).json({
       error: "Username and clientName are required.",
     });
   }
 
   try {
+    console.log("Querying")
     // Query to find the user based on the provided username and retrieve their clientId
     const user = await new Promise((resolve, reject) => {
       db.get(
@@ -324,9 +329,11 @@ app.post("/googleauth/external-id", apiAuthMiddleware, async (req, res) => {
 
     // If the user does not exist, return an error
     if (!user) {
+      console.log('404',"User not found.")
       return res.status(404).json({ error: "User not found." });
     }
 
+    console.log("Querying.")
     // Now verify that the clientId matches the provided clientName
     const client = await new Promise((resolve, reject) => {
       db.get(
@@ -347,6 +354,7 @@ app.post("/googleauth/external-id", apiAuthMiddleware, async (req, res) => {
         client,
         user
       })
+      console.log("403.")
       return res
         .status(403)
         .json({ error: "Client name does not match the user's client." });
@@ -355,6 +363,7 @@ app.post("/googleauth/external-id", apiAuthMiddleware, async (req, res) => {
     // Calculate the external ID
     const externalId = `${user.id}_${client.id}`;
 
+    console.log("Success.")
     // Return the external ID
     return res.json({ externalId });
   } catch (error) {
@@ -366,7 +375,7 @@ app.post("/googleauth/external-id", apiAuthMiddleware, async (req, res) => {
 // external-app/api/index.js (291-406)
 /**
  * @swagger
- * /googleauth/get_jwt:
+ * /ssoauth/get_jwt:
  *   get:
  *     summary: Get JWT Token
  *     description: Retrieve a JWT token for a user based on their externalUserId.
@@ -419,10 +428,10 @@ app.post("/googleauth/external-id", apiAuthMiddleware, async (req, res) => {
  *                   type: string
  *                   description: Error message indicating internal server error.
  */
-app.get("/googleauth/get_jwt", apiAuthMiddleware, async (req, res) => {
+app.get("/ssoauth/get_jwt", apiAuthMiddleware, async (req, res) => {
   const { externalUserId } = req.query;
 
-  console.log("/googleauth/get_jwt", { query: req.query });
+  console.log("/ssoauth/get_jwt", { query: req.query });
 
   // Validate required field
   if (!externalUserId) {

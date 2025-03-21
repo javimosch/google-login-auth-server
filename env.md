@@ -1,41 +1,81 @@
-# Google Login Auth server
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-GOOGLE_REDIRECT_URI=http://localhost:3000/auth/google/callback
+# Environment Variables Documentation
 
-# Base url for external api
-EXTERNAL_APP_API_URL=http://localhost:3001
+This document lists all environment variables used by the application, showing both their .env format and how they are accessed in the code.
 
-# Customize external endpoint routes
-EXTERNAL_API__LINK_ACCOUNT_ROUTE=/googleauth/link
-EXTERNAL_API__GET_EXTERNAL_ID_ROUTE=/googleauth/external-id
-EXTERNAL_API__GET_JWT_ROUTE=/googleauth/get_jwt
+## Core Configuration
 
-# This is optional if we want to redirect to external app.
-# If we integrate the popup from the external app, we will just retrieve the jwt
-EXTERNAL_APP_URL=http://localhost:3001
+| Code Usage (camelCase) | Environment Variable |
+|----------------------|---------------------|
+| `port` | `PORT` |
+| `mongoUri` | `MONGO_URI` |
+| `dbName` | `DB_NAME` |
 
-# Auth with external app (/googleauth routes)
-EXTERNAL_APP_API_KEY=secret
+## Application Registry
+| Code Usage (camelCase) | Environment Variable |
+|----------------------|---------------------|
+| N/A (config only) | `APP_NAMES` |
 
-# What fields to ask if the link is needed
-EXTERNAL_APP_LINK_FIELDS=client,username,password
+## Identity Provider (IDP) Configuration
 
-PORT=3000
+For each IDP (GOOGLE, KEYCLOAK, GITLAB), the following pattern applies:
 
-# External app config
+| Code Usage (camelCase) | Environment Variable |
+|----------------------|---------------------|
+| `openidProvider` | `{IDP}__OPENID_PROVIDER` |
+| `clientId` | `{IDP}__CLIENT_ID` |
+| `clientSecret` | `{IDP}__CLIENT_SECRET` |
+| `redirectUrl` | `{IDP}__REDIRECT_URL` |
+| `scope` | `{IDP}__SCOPE` |
+| `authUrl` | `{IDP}__AUTH_URL` |
 
-# If a request has this bearer, we grants access to /googleauth routes
-MICROSERVICE_GOOGLELOGIN_API_KEY=secret
+Additional Keycloak-specific fields:
+| Code Usage (camelCase) | Environment Variable |
+|----------------------|---------------------|
+| `tokenEndpoint` | `KEYCLOAK__TOKEN_ENDPOINT` |
+| `userinfoEndpoint` | `KEYCLOAK__USERINFO_ENDPOINT` |
 
-JWT_SECRET=secret
+## Sign-in Application Configuration
 
-# MongoDB Configuration
-MONGO_URI=your_mongo_uri
-DB_NAME=your_database_name
+For each application (KEYCLOAK_APP, GEOREDV3LOCAL, GEOREDV3, STYX), the following pattern applies:
 
-# Auth-Applications
-AUTH_APPLICATIONS=app1:Application One,app2:Application Two,app3:Application Three
+| Code Usage (camelCase) | Environment Variable |
+|----------------------|---------------------|
+| `externalAppUrl` | `{APP}__EXTERNAL_APP_URL` |
+| `externalAppApiKey` | `{APP}__EXTERNAL_APP_API_KEY` |
+| `externalAppLinkFields` | `{APP}__EXTERNAL_APP_LINK_FIELDS` |
+| `externalAppApiUrl` | `{APP}__EXTERNAL_APP_API_URL` |
+| `externalApiGetExternalIdRoute` | `{APP}__EXTERNAL_API_GET_EXTERNAL_ID_ROUTE` |
+| `externalApiGetJwtRoute` | `{APP}__EXTERNAL_API_GET_JWT_ROUTE` |
 
-# Auth-Applications-custom can be configured be either configuring apps.yml or overriding single properties here
-GEOREDV3__appName=GeoredV2
+## Authentication Configuration
+
+For each application, the following optional authentication flags are available:
+
+| Code Usage (camelCase) | Environment Variable | Default | Description |
+|----------------------|---------------------|---------|-------------|
+| `useXApiKey` | `{APP}__USE_X_API_KEY` | `false` | If 'true', uses X-API-KEY header instead of Bearer token |
+| `usePostForToken` | `{APP}__USE_POST_FOR_TOKEN` | `false` | If 'true', uses POST method instead of GET for token retrieval |
+| `getJwtTokenField` | `{APP}__GET_JWT_TOKEN_FIELD` | `token` | Specifies the field name to extract the JWT token from the response |
+
+## Example Usage
+
+In JavaScript code:
+```javascript
+const app = global.useAppDetails('KEYCLOAK_APP');
+
+// Access configuration
+const apiUrl = app.externalAppApiUrl;
+const apiKey = app.externalAppApiKey;
+```
+
+In .env file:
+```bash
+# IDP Example (Google)
+GOOGLE__OPENID_PROVIDER=1
+GOOGLE__CLIENT_ID=your-client-id
+GOOGLE__REDIRECT_URL=http://localhost:3000/auth/callback/google
+
+# Sign-in App Example
+KEYCLOAK_APP__EXTERNAL_APP_API_URL=http://localhost:3000
+KEYCLOAK_APP__EXTERNAL_APP_API_KEY=your-api-key
+```
