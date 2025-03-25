@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuration SSO</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+<div class="container mx-auto px-4 py-8">
+  <header class="relative mb-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-4">Page d'administration</h1>
+    <a href="/admin/logout" class="absolute top-0 right-0 bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition duration-300">
+      Déconnexion
+    </a>
+  </header>
+
+  <div class="bg-white shadow-md rounded-lg p-6 mb-8">
+    <h2 class="text-2xl font-semibold text-gray-700 mb-6">Ajouter une configuration SSO</h2>
+    <form id="configForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <input type="hidden" id="configId">
+
+      <div class="flex flex-col">
+        <label for="clientName" class="mb-2 text-gray-700 font-medium">Nom du client</label>
+        <input
+                type="text"
+                id="clientName"
+                placeholder="Saisissez le nom du client"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+      </div>
+
+      <div class="flex flex-col">
+        <label for="provider" class="mb-2 text-gray-700 font-medium">Fournisseur d'accès</label>
+        <select
+                id="provider"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Sélectionnez un fournisseur</option>
+          <option value="oauth2">OAuth2</option>
+          <option value="google">Google</option>
+          <option value="github">GitHub</option>
+          <option value="gitlab">GitLab</option>
+          <option value="keycloak">Keycloak</option>
+          <option value="auth0">Auth0</option>
+        </select>
+      </div>
+
+      <div class="flex flex-col" data-field="clientId">
+        <label for="clientId" class="mb-2 text-gray-700 font-medium">ID client</label>
+        <input
+                type="text"
+                id="clientId"
+                placeholder="Saisissez l'ID client"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+      </div>
+
+      <div class="flex flex-col" data-field="clientSecret">
+        <label for="clientSecret" class="mb-2 text-gray-700 font-medium">Secret client</label>
+        <input
+                type="text"
+                id="clientSecret"
+                placeholder="Saisissez le secret client"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+      </div>
+
+      <div class="flex flex-col" data-field="domain">
+        <label for="domain" class="mb-2 text-gray-700 font-medium">Domaine</label>
+        <input
+                type="text"
+                id="domain"
+                placeholder="Saisissez le domaine"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+      </div>
+
+      <div class="flex flex-col" data-field="authorizationURL">
+        <label for="authorizationURL" class="mb-2 text-gray-700 font-medium">URL d'authentification</label>
+        <input
+                type="text"
+                id="authorizationURL"
+                placeholder="Saisissez l'URL d'authentification"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+      </div>
+
+      <div class="flex flex-col" data-field="tokenURL">
+        <label for="tokenURL" class="mb-2 text-gray-700 font-medium">URL de récupération du token</label>
+        <input
+                type="text"
+                id="tokenURL"
+                placeholder="Saisissez l'URL de récupération du token"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+      </div>
+
+      <div class="flex flex-col" data-field="userInfoURL">
+        <label for="userInfoURL" class="mb-2 text-gray-700 font-medium">URL de récupération des informations utilisateur</label>
+        <input
+                type="text"
+                id="userInfoURL"
+                placeholder="Saisissez l'URL des informations utilisateur"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+      </div>
+
+      <div class="flex flex-col" data-field="redirectURI">
+        <label for="redirectURI" class="mb-2 text-gray-700 font-medium">URI de redirection</label>
+        <input
+                type="text"
+                id="redirectURI"
+                placeholder="Saisissez l'URI de redirection"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+      </div>
+
+      <div class="flex flex-col" data-field="scopes">
+        <label for="scopes" class="mb-2 text-gray-700 font-medium">Scopes</label>
+        <input
+                type="text"
+                id="scopes"
+                placeholder="Saisissez les scopes (séparés par des virgules)"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+      </div>
+
+      <button
+              type="submit"
+              class="col-span-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+      >
+        Enregistrer
+      </button>
+    </form>
+  </div>
+
+  <div class="bg-white shadow-md rounded-lg p-6">
+    <h2 class="text-2xl font-semibold text-gray-700 mb-6">Configurations enregistrées</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full border-collapse">
+        <thead>
+        <tr class="bg-gray-100">
+          <th class="border p-3 text-left">Identifiant unique</th>
+          <th class="border p-3 text-left">Nom du client</th>
+          <th class="border p-3 text-left">Provider</th>
+          <th class="border p-3 text-left">Actions</th>
+        </tr>
+        </thead>
+        <tbody id="configList"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function loadConfigurations() {
+    const response = await fetch("/api/client-configs");
+    const configs = await response.json();
+    const configList = document.getElementById("configList");
+    configList.innerHTML = "";
+    configs.forEach(config => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+          <td class="border p-3">${config._id}</td>
+          <td class="border p-3">${config.clientName}</td>
+          <td class="border p-3">${config.provider}</td>
+          <td class="border p-3">
+            <button onclick="editConfig('${config._id}')" class="bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600 mr-2">Modifier</button>
+            <button onclick="deleteConfig('${config._id}')" class="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600">Supprimer</button>
+          </td>
+        `;
+      configList.appendChild(row);
+    });
+  }
+
+  async function submitForm(event) {
+    event.preventDefault();
+    const configId = document.getElementById("configId").value;
+    const data = {
+      clientName: document.getElementById("clientName").value,
+      clientId: document.getElementById("clientId").value,
+      clientSecret: document.getElementById("clientSecret").value,
+      authorizationURL: document.getElementById("authorizationURL").value,
+      tokenURL: document.getElementById("tokenURL").value,
+      userInfoURL: document.getElementById("userInfoURL").value,
+      redirectURI: document.getElementById("redirectURI").value,
+      domain: document.getElementById("domain").value,
+      scopes: document.getElementById("scopes").value.split(","),
+      provider: document.getElementById("provider").value
+    };
+
+    let response;
+    if (configId) {
+      response = await fetch(`/api/client-config/${configId}`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data)
+      });
+    } else {
+      response = await fetch("/api/client-config", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data)
+      });
+    }
+
+    const result = await response.json();
+    alert(result.message || "Erreur");
+    document.getElementById("configForm").reset();
+    document.getElementById("configId").value = "";
+    loadConfigurations();
+  }
+
+  async function editConfig(id) {
+    const response = await fetch(`/api/client-configs/${id}`);
+    const config = await response.json();
+    document.getElementById("configId").value = config._id;
+    document.getElementById("clientName").value = config.clientName;
+    document.getElementById("clientId").value = config.clientId;
+    document.getElementById("clientSecret").value = config.clientSecret;
+    document.getElementById("authorizationURL").value = config.authorizationURL;
+    document.getElementById("tokenURL").value = config.tokenURL;
+    document.getElementById("userInfoURL").value = config.userInfoURL;
+    document.getElementById("redirectURI").value = config.redirectURI;
+    document.getElementById("domain").value = config.domain;
+    document.getElementById("scopes").value = config.scopes.join(",");
+    document.getElementById("provider").value = config.provider;
+    updateFormFields()
+  }
+
+  async function deleteConfig(id) {
+    if (!confirm("Voulez-vous vraiment supprimer cette configuration ?")) return;
+    await fetch(`/api/client-config/${id}`, {method: "DELETE"});
+    loadConfigurations();
+  }
+
+  document.getElementById("configForm").addEventListener("submit", submitForm);
+  loadConfigurations();
+
+  function updateFormFields() {
+    const provider = document.getElementById("provider").value;
+    const fields = {
+      oauth2: ["clientId", "clientSecret", "authorizationURL", "tokenURL", "redirectURI", "scopes"],
+      google: ["clientId", "clientSecret", "redirectURI", "scopes"],
+      github: ["clientId", "clientSecret", "redirectURI", "scopes"],
+      gitlab: ["clientId", "clientSecret", "redirectURI", "scopes"],
+      keycloak: ["clientId", "clientSecret", "authorizationURL", "tokenURL", "userInfoURL", "redirectURI", "scopes"],
+      auth0: ["clientId", "clientSecret", "domain", "redirectURI", "clientID", "scopes"]
+    };
+
+    // Cache tous les champs
+    document.querySelectorAll('[data-field]').forEach(field => {
+      field.classList.add('hidden');
+      field.querySelector('input').required = false;
+    });
+
+    // Affiche les champs nécessaires pour le provider sélectionné
+    if (provider && fields[provider]) {
+      fields[provider].forEach(fieldName => {
+        const field = document.querySelector(`[data-field="${fieldName}"]`);
+        if (field) {
+          field.classList.remove('hidden');
+          field.querySelector('input').required = true;
+        }
+      });
+    }
+  }
+
+  function setDefaultUrls() {
+    const provider = document.getElementById("provider").value;
+    const defaults = {
+      keycloak: {
+        scopes: "openid,profile,email",
+      },
+      google: {
+        scopes: "profile,email",
+      },
+      oauth2: {
+        scopes: "openid,profile,email",
+      },
+      auth0: {
+        scopes: "openid,profile,email",
+      },
+      gitlab: {
+        scopes: "openid,profile,email,api,read_api",
+      },
+      github: {
+        scopes: "user:email",
+      },
+    };
+
+    if (defaults[provider]) {
+      Object.entries(defaults[provider]).forEach(([field, value]) => {
+        const input = document.getElementById(field);
+        if (input) input.value = value;
+      });
+    }
+  }
+
+  // Ajouter l'écouteur d'événements
+  document.getElementById("provider").addEventListener("change", () => {
+    updateFormFields();
+    setDefaultUrls();
+  });
+
+  // Exécuter au chargement de la page
+  updateFormFields();
+</script>
+<style>
+	.hidden {
+		display: none;
+	}
+</style>
+</body>
+</html>

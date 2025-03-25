@@ -11,13 +11,14 @@
     "lint:watch": "npx nodemon --exec 'npm run lint' -e js,vue"
   },
   "dependencies": {
-    "axios": "^1.7.7",
+    "axios": "^1.8.2",
+    "body-parser": "^1.20.3",
     "chance": "^1.1.7",
     "crypto": "^1.0.1",
     "dotenv": "^16.4.5",
     "ejs": "^3.1.9",
     "express": "^4.21.1",
-    "express-session": "^1.18.0",
+    "express-session": "^1.18.1",
     "google-auth-library": "^9.0.0",
     "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
@@ -27,6 +28,15 @@
     "nodemon": "^3.0.0",
     "oidc-provider": "^8.5.1",
     "openid-client": "^5.7.0",
+    "passport": "^0.7.0",
+    "passport-auth0": "^1.4.4",
+    "passport-custom": "^1.1.1",
+    "passport-github2": "^0.1.12",
+    "passport-gitlab": "^0.5.0",
+    "passport-gitlab2": "^5.0.0",
+    "passport-google-oauth20": "^2.0.0",
+    "passport-oauth2": "^1.8.0",
+    "passport-openidconnect": "^0.1.2",
     "sqlite3": "^5.1.7"
   }
 }
