@@ -22,6 +22,8 @@ function handleOAuth(req, res, providerId) {
     `/auth/authorize/${providerId}`
   );
 
+  console.log('providerDetails for', providerId, {providerDetails});
+
   if (!providerDetails.openidProvider) {
     throw new Error("Invalid provider");
   }
@@ -47,6 +49,7 @@ function handleOAuth(req, res, providerId) {
 
   console.log("callbackUrl", callbackUrl.toString());
 
+  console.log("authUrl", authUrl);
   const authUrlObj = new URL(authUrl);
   let clientParamName = authUrlObj.toString().includes('auth0')?'client':'client_id'
 

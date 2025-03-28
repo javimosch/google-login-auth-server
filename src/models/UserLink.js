@@ -67,6 +67,8 @@ async function linkExternalUser(providerId,appId,externalUserId, email, metadata
         if (document) {
             // If an existing link is found, you can return it or handle the situation as needed
             return { message: 'User already linked', document };
+        }else{
+            console.log('User not linked', {providerId,appId,externalUserId,email,metadata,appId})
         }
 
         // Create a new UserGoogleLink document

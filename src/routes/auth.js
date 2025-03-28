@@ -11,7 +11,10 @@ router.get("/authorize/:providerId", (req, res) => {
   const providerId = req.params.providerId;
   let match = global.applications.find((a) => a.appId.toLowerCase() === providerId.toLowerCase());
   if (!match) {
-    console.error(`Invalid providerId specified: ${providerId}`);
+    console.error(`Invalid providerId specified: ${providerId}`,{
+      providerId,
+      applications: global.applications
+    });
     return res.status(400).send("Invalid provider specified");
   }
   handleOAuth(req, res, providerId);
