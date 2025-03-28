@@ -6,6 +6,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Home</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script>
+    window.apps = JSON.parse('<%- JSON.stringify(apps).replace(/</g, '\\u003c') %>')
+    window.idps = JSON.parse('<%- JSON.stringify(idps).replace(/</g, '\\u003c') %>')
+
+    console.log({
+      apps,
+      idps
+    })
+
+  </script>
 </head>
 
 <body class="bg-gray-100 flex flex-col items-center justify-center h-screen">
@@ -23,22 +33,11 @@
         <% }) %>
     </select>
 
-    <button id="googleLoginBtn"
-      class="mt-4 w-full bg-blue-500 text-white font-semibold py-2 px-4 rounded shadow hover:bg-blue-600 transition duration-200">
-      Login with Google
-    </button>
-    <button id="gitlabLoginBtn"
-      class="mt-4 w-full bg-blue-500 text-white font-semibold py-2 px-4 rounded shadow hover:bg-blue-600 transition duration-200">
-      Login with Gitlab
-    </button>
-    <button id="keycloakLoginBtn"
-      class="mt-4 w-full bg-blue-500 text-white font-semibold py-2 px-4 rounded shadow hover:bg-blue-600 transition duration-200">
-      Login with Keycloak
-    </button>
-    <button style="display:none" id="auth0LoginBtn"
-      class="mt-4 w-full bg-blue-500 text-white font-semibold py-2 px-4 rounded shadow hover:bg-blue-600 transition duration-200">
-      Login with Auth0
-    </button>
+    <div id="buttons" class="buttons">
+
+    </div>
+   
+
   </div>
   <div id="message" class="text-lg text-gray-700 mb-4"></div> <!-- To display messages from the popup -->
   <div>
@@ -56,7 +55,7 @@
         console.log('event', {
           event
         })
-        if (event.data.type === `${providerId}_auth`) {
+        if (event.data.type === `${providerId.toLowerCase()}_auth`) {
           document.getElementById('message').innerText = 'Received from popup: ' + JSON.stringify(event.data);
           state.redirectUrl = event.data.data.redirectUrl
           if (options.onPopupDataReceived) {
@@ -74,7 +73,7 @@
         el.addEventListener('click', triggerPopup)
       }
 
-      if(options.el){
+      if (options.el) {
         bindBtn(options.el)
       }
 
@@ -88,7 +87,7 @@
 
     let getState = null
 
-    const toogleRedirectButton = (isVisible)=>{
+    const toogleRedirectButton = (isVisible) => {
       if (isVisible) {
         redirectBtn.style.display = 'block'
       } else {
@@ -96,39 +95,32 @@
       }
     }
 
-    const { getState:getGoogleLoginState } = useOpenIdPopupLogin('google',{
-      el: window.googleLoginBtn,
-      onPopupDataReceived(data, state) {
-        toogleRedirectButton(!!state.redirectUrl)
-        getState = getGoogleLoginState
-      }
-    })
+    window.idps.forEach(app => {
 
-    const { getState:getGitlabLoginState } = useOpenIdPopupLogin('gitlab',{
-      el: window.gitlabLoginBtn,
-      onPopupDataReceived(data, state) {
-        toogleRedirectButton(!!state.redirectUrl)
-        getState = getGitlabLoginState
-      }
-    })
+      console.log('Adding button for idp', {app})
 
-    const { getState:getAuth0LoginState } = useOpenIdPopupLogin('auth0',{
-      el: window.auth0LoginBtn,
-      onPopupDataReceived(data, state) {
-        toogleRedirectButton(!!state.redirectUrl)
-        getState = getAuth0LoginState
-      }
-    })
+      let div = document.createElement('div')
+      div.id = `buttons-${app.appId}`
+      div.innerHTML = `<button
+      id="button_${app.appId}"
+       class="mt-4 w-full bg-blue-500 text-white font-semibold py-2 px-4 rounded shadow hover:bg-blue-600 transition duration-200">
+      Login with ${app.appName}
+    </button>`
+      div.addEventListener('click', () => {
+
+      })
+      window.buttons.appendChild(div)
+
+      const { getState: getAppState } = useOpenIdPopupLogin(app.appId, {
+        el: window[`button_${app.appId}`],
+        onPopupDataReceived(data, state) {
+          toogleRedirectButton(!!state.redirectUrl)
+          getState = getAppState
+        }
+      })
 
 
-    const { getState:getKeycloakLoginState } = useOpenIdPopupLogin('keycloak',{
-      el: window.keycloakLoginBtn,
-      onPopupDataReceived(data, state) {
-        toogleRedirectButton(!!state.redirectUrl)
-        getState = getKeycloakLoginState
-      }
     })
-    
 
     function redirectToExternalApp() {
       if (getState().redirectUrl) {

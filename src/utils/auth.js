@@ -303,42 +303,56 @@ async function getExternalToken(externalUserId, appId) {
  * @throws {Error} If provider is not supported
  */
 function getProviderClient(providerId, appId) {
-  switch (providerId) {
-    case 'google': {
-      const { useGoogleAPI } = require('../config/google');
-      const { createGoogleClientByApp } = useGoogleAPI();
-      const client = createGoogleClientByApp(providerId, appId);
-      return {
-        getDetailsGivenCode: client.getGoogleDetailsGivenCode.bind(client)
-      };
-    }
-    case 'gitlab': {
-      const { useGitLabAPI } = require('../config/gitlab');
-      const { createGitLabClientByApp } = useGitLabAPI();
-      const client = createGitLabClientByApp(providerId, appId);
-      return {
-        getDetailsGivenCode: client.getGitLabDetailsGivenCode.bind(client)
-      };
-    }
-    case 'auth0': {
-      const { useAuth0API } = require('../config/auth0');
-      const { createAuth0ClientByApp } = useAuth0API();
-      const client = createAuth0ClientByApp(providerId, appId);
-      return {
-        getDetailsGivenCode: client.getDetailsGivenCode.bind(client)
-      };
-    }
-    case 'keycloak': {
-      const { useKeycloakAPI } = require('../config/keycloak');
-      const { createKeycloakClientByApp } = useKeycloakAPI();
-      const client = createKeycloakClientByApp(providerId, appId);
-      return {
-        getDetailsGivenCode: client.getKeycloakDetailsGivenCode.bind(client)
-      };
-    }
-    default:
-      throw new Error(`Unsupported provider: ${providerId}`);
+  if(providerId.toLowerCase().includes('keycloak')) {
+    return getKeycloakClientByApp(providerId, appId);
   }
+  if(providerId.toLowerCase().includes('google')) {
+    return getGoogleClientByApp(providerId, appId);
+  }
+  if(providerId.toLowerCase().includes('gitlab')) {
+    return getGitLabClientByApp(providerId, appId);
+  }
+  if(providerId.toLowerCase().includes('auth0')) {
+    return getAuth0ClientByApp(providerId, appId);
+  }
+
+  throw new Error(`Unsupported provider: ${providerId}`);
+}
+
+function getAuth0ClientByApp(providerId, appId) {
+  const { useAuth0API } = require('../config/auth0');
+  const { createAuth0ClientByApp } = useAuth0API();
+  const client = createAuth0ClientByApp(providerId, appId);
+  return {
+    getDetailsGivenCode: client.getDetailsGivenCode.bind(client)
+  };
+}
+
+function getGitLabClientByApp(providerId, appId) {
+  const { useGitLabAPI } = require('../config/gitlab');
+  const { createGitLabClientByApp } = useGitLabAPI();
+  const client = createGitLabClientByApp(providerId, appId);
+  return {
+    getDetailsGivenCode: client.getGitLabDetailsGivenCode.bind(client)
+  };
+}
+
+function getGoogleClientByApp(providerId, appId) {
+  const { useGoogleAPI } = require('../config/google');
+  const { createGoogleClientByApp } = useGoogleAPI();
+  const client = createGoogleClientByApp(providerId, appId);
+  return {
+    getDetailsGivenCode: client.getGoogleDetailsGivenCode.bind(client)
+  };
+}
+
+function getKeycloakClientByApp(providerId, appId) {
+  const { useKeycloakAPI } = require('../config/keycloak');
+  const { createKeycloakClientByApp } = useKeycloakAPI();
+  const client = createKeycloakClientByApp(providerId, appId);
+  return {
+    getDetailsGivenCode: client.getKeycloakDetailsGivenCode.bind(client)
+  };
 }
 
 module.exports = {

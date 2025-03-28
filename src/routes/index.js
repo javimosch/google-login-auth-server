@@ -7,7 +7,8 @@ const router = express.Router();
 router.get('/', (req, res) => {
   // Filter out IDP apps (those with openidProvider=1)
   res.render('index',{
-    apps: global.applications.filter(a => !a.openidProvider)
+    apps: global.applications.filter(a => !a.openidProvider),
+    idps: global.applications.filter(a => a.openidProvider)
   });
 });
 
