@@ -1,120 +1,165 @@
 const dotenv = require("dotenv");
-const yaml = require("js-yaml");
-const fs = require("fs");
 const axios = require("axios");
 
 dotenv.config();
 
-// Load configurations from apps.yml
-const loadConfig = () => {
-  try {
-    const fileContents = fs.readFileSync("./src/config/apps.yml", "utf8");
-    return yaml.load(fileContents);
-  } catch (e) {
-    console.error(e);
-    return {};
-  }
+/**
+ * Converts a string to camelCase
+ * @param {string} str String to convert
+ * @returns {string} Camelized string
+ */
+const toCamelCase = (str) => {
+  return str.toLowerCase().replace(/_([a-z])/g, (g) => g[1].toUpperCase());
 };
 
-const applicationsConfig = loadConfig();
+/**
+ * Parses applications defined through environment variables
+ * Format: APP_NAMES=app1,app2,app3
+ * Then for each app: APP1__NAME, APP1__EXTERNAL_APP_API_URL, etc.
+ * @returns {Array} Array of application objects
+ */
+const parseApplicationsFromEnv = () => {
+  const appNames = (process.env.APP_NAMES || "").split(",").filter(name => name.trim());
+  
+  return appNames.map(appName => {
+    const appId = appName.trim();
+    const envPrefix = appId.toUpperCase();
+    const app = {
+      appId,
+      appName: process.env[`${envPrefix}__NAME`] || appId
+    };
 
-console.log({
-  applicationsConfig,
-});
+    // Get all environment variables for this app
+    Object.keys(process.env)
+      .filter(key => key.startsWith(`${envPrefix}__`))
+      .forEach(key => {
+        const propName = key.replace(`${envPrefix}__`, '');
+        if (propName !== 'NAME') {
+          const camelKey = toCamelCase(propName);
+          app[camelKey] = process.env[key];
+        }
+      });
 
-let applications = (process.env.AUTH_APPLICATIONS||"").split(",").map((app) => {
-  const [appId, appName] = app.split(":");
-  return { appId, appName };
-}).filter(a=>!!a.appId);
+    return app;
+  });
+};
 
-if(applications.length===0&&Object.keys(applicationsConfig.apps).length>0){
-  applications = Object.keys(applicationsConfig.apps).map((n)=>{
-    return {
-      appId:n,
-      appName: applicationsConfig.apps[n].name||applicationsConfig.apps[n].appName||n
-    }
-  })
-}
-
-applications = applications.map((app) => {
-  const appConfig = applicationsConfig.apps[app.appId];
-  return { appId:app.appId, appName:app.appName, ...appConfig };
-});
-
-
-for (let index in applications) {
-  let app = applications[index];
-  let appId = app.appId;
-  for (let x in app) {
-    if (!["appId"].includes(x)) {
-      console.log("CHECK",`${appId.toUpperCase()}__${x.toUpperCase()}`)
-      if (process.env[`${appId.toUpperCase()}__${x.toUpperCase()}`]) {
-        applications[index][x] = process.env[`${appId.toUpperCase()}__${x.toUpperCase()}`];
-      }
-    }
-  }
-}
-
+/**
+ * Gets application details by appId
+ * @param {string} appId Application ID
+ * @param {string} scope Scope for error message
+ * @returns {Object} Application details
+ */
 global.useAppDetails = function (appId, scope) {
-  let app = global.applications.find((a) => a.appId === appId);
+  let app = global.applications.find((a) => a.appId.toLowerCase() === appId.toLowerCase());
   if (!app) {
     throw new Error(`${scope || ""}: Invalid appId: ` + appId);
   }
   return app;
 };
 
+/**
+ * Creates API helper functions for an application
+ * @param {string} appId Application ID
+ * @returns {Object} Object containing API helper functions
+ */
 global.useAppAPIs = function (appId) {
-  let app = global.useAppDetails(appId,'useAppAPIs')
+  let app = global.useAppDetails(appId, 'useAppAPIs');
+  
   return {
     /**
      * Helper to call external app api
-     * @param {*} method
-     * @param {*} relativePath
-     * @param {*} payload
-     * @returns
+     * @param {string} method HTTP method
+     * @param {string} relativePath API endpoint path
+     * @param {Object} payload Request payload
+     * @returns {Promise} API response
      */
     async callExternalApi(method, relativePath, payload = null) {
-      const externalAppApiUrl = app.EXTERNAL_APP_API_URL;
-      const externalAppApiKey = app.EXTERNAL_APP_API_KEY;
+      const externalAppApiUrl = app.externalAppApiUrl;
+      const externalAppApiKey = app.externalAppApiKey;
+      const useXApiKey = app.useXApiKey === 'true';
 
-      console.log('callExternalApi',{
-        url:`${externalAppApiUrl}${relativePath}`
-      })
+      // Log the request details (excluding sensitive data)
+      console.log('callExternalApi Request:', {
+        method,
+        url: `${externalAppApiUrl}${relativePath}`,
+        hasPayload: !!payload,
+        hasApiKey: !!externalAppApiKey,
+        authType: useXApiKey ? 'X-API-KEY' : 'Bearer'
+      });
+
       try {
         const config = {
           method: method,
           url: `${externalAppApiUrl}${relativePath}`,
           headers: {
-            Authorization: `Bearer ${externalAppApiKey}`,
-            Accept: "application/json",
+            "Content-Type": "application/json",
           },
         };
 
-        // If it's a GET request, include the payload as query parameters
-        if (method.toUpperCase() === "GET" && payload) {
-          config.params = payload; // Axios will automatically handle the serialization
+        if (externalAppApiKey) {
+          if (useXApiKey) {
+            config.headers["X-API-KEY"] = externalAppApiKey;
+          } else {
+            config.headers["Authorization"] = `Bearer ${externalAppApiKey}`;
+          }
         }
 
-        // If it's a POST request, include the payload in the request body
-        if (method.toUpperCase() === "POST" && payload) {
-          config.data = payload;
+        if (payload) {
+          if (method === "GET") {
+            config.params = payload;
+          } else {
+            config.data = payload;
+          }
         }
+
+        // Log the actual request configuration (with sensitive data masked)
+        console.log('Request Configuration:', {
+          method: config.method,
+          url: config.url,
+          headers: {
+            ...config.headers,
+            'Authorization': config.headers['Authorization'] ? '[BEARER TOKEN PRESENT]' : undefined,
+            'X-API-KEY': config.headers['X-API-KEY'] ? '[API KEY PRESENT]' : undefined
+          },
+          params: config.params,
+          data: config.data
+        });
 
         const response = await axios(config);
-        console.log('callExternalApi',{
-          relativePath,
-          data:response.data
-        })
-        return response.data; // Return the data received from the API
-      } catch (err) {
-        console.error("callExternalApi error:", { err:err.stack });
-        //throw err; // Rethrow the error for handling in the calling function
-        return null
+
+        // Log the response (excluding sensitive data)
+        console.log('API Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers,
+          data: response.data ? '[DATA PRESENT]' : undefined
+        });
+
+        return response.data;
+      } catch (error) {
+        console.error('API Error:', {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          config: {
+            url: error.config?.url,
+            method: error.config?.method,
+            headers: {
+              ...error.config?.headers,
+              'Authorization': error.config?.headers?.Authorization ? '[BEARER TOKEN PRESENT]' : undefined,
+              'X-API-KEY': error.config?.headers?.['X-API-KEY'] ? '[API KEY PRESENT]' : undefined
+            }
+          }
+        });
+        throw error;
       }
     },
   };
 };
 
-global.applications=applications
+// Initialize applications
+global.applications = parseApplicationsFromEnv();
 
-module.exports = applications;
+module.exports = global.applications;

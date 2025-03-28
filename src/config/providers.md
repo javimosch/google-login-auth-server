@@ -2,143 +2,105 @@
 
 Providers are external identity providers (IdPs) that facilitate authentication for users. They allow users to log in to applications using their existing accounts from services like Google and GitLab. This integration simplifies the authentication process and enhances user experience by reducing the need for multiple credentials.
 
+# Configuration
+
+Providers are configured through environment variables using a standardized format:
+
+```sh
+APP_NAMES=google,gitlab,keycloak,auth0
+GOOGLE__CLIENT_ID=your_client_id
+GOOGLE__CLIENT_SECRET=your_client_secret
+GOOGLE__REDIRECT_URL=http://localhost:3000/auth/callback/google
+GOOGLE__AUTH_URL=https://accounts.google.com/o/oauth2/v2/auth
+GOOGLE__OPENID_PROVIDER=true
+```
 
 # Supported Providers
 
 ## Google
 - **OpenID Provider**: Yes
-- **Client ID**: Configurable in `apps.yml` and `.env`
-- **Client Secret**: Configurable in `apps.yml` and `.env`
-- **Redirect URL**: `http://localhost:3000/auth/callback/google`
-- **Scope**: `profile email`
-- **Auth URL**: `https://accounts.google.com/o/oauth2/v2/auth`
+- **Environment Variables**:
+  - `GOOGLE__CLIENT_ID`
+  - `GOOGLE__CLIENT_SECRET`
+  - `GOOGLE__REDIRECT_URL`
+  - `GOOGLE__AUTH_URL`
+  - `GOOGLE__OPENID_PROVIDER`
+- **Default Scope**: `profile email`
 
 ## GitLab
 - **OpenID Provider**: Yes
-- **Client ID**: Configurable in `apps.yml` and `.env`
-- **Client Secret**: Configurable in `apps.yml` and `.env`
-- **Redirect URL**: `http://localhost:3000/auth/callback/gitlab`
-- **Scope**: `openid profile email api read_api`
-- **Auth URL**: `https://gitlab.com/oauth/authorize`
+- **Environment Variables**:
+  - `GITLAB__CLIENT_ID`
+  - `GITLAB__CLIENT_SECRET`
+  - `GITLAB__REDIRECT_URL`
+  - `GITLAB__AUTH_URL`
+  - `GITLAB__OPENID_PROVIDER`
+- **Default Scope**: `openid profile email api read_api`
 
-# Adding new providers
+## Auth0
+- **OpenID Provider**: Yes
+- **Environment Variables**:
+  - `AUTH0__CLIENT_ID`
+  - `AUTH0__CLIENT_SECRET`
+  - `AUTH0__REDIRECT_URL`
+  - `AUTH0__AUTH_URL`
+  - `AUTH0__OPENID_PROVIDER`
+- **Default Scope**: `openid profile email`
 
-## Retrieve idp account details
+## Keycloak
+- **OpenID Provider**: Yes
+- **Environment Variables**:
+  - `KEYCLOAK__CLIENT_ID`
+  - `KEYCLOAK__CLIENT_SECRET`
+  - `KEYCLOAK__REDIRECT_URL`
+  - `KEYCLOAK__AUTH_URL`
+  - `KEYCLOAK__OPENID_PROVIDER`
+- **Default Scope**: `openid profile email`
 
-### Adding a composable to interact with the idp API
+# Adding New Providers
 
-Example for gitlab
+To add a new provider:
+
+1. Create a new configuration file in `src/config/` (e.g., `newprovider.js`)
+2. Implement the provider API client following this template:
 
 ```js
-const axios = require("axios");
-
-function useGitLabAPI() {
+function useNewProviderAPI() {
   return {
-    createGitLabClientByApp(providerId,appId) {
-      let providerDetails = global.applications.find((a) => a.appId === providerId);
-      let app = global.applications.find((a) => a.appId === appId);
+    createNewProviderClientByApp(providerId, appId) {
+      let providerDetails = global.useAppDetails(providerId, 'newprovider');
+      let app = global.useAppDetails(appId, 'newprovider');
       if (!app) {
-        throw new Error("createGitLabClientByApp: invalid appId: " + appId);
+        throw new Error("createNewProviderClientByApp: invalid appId: " + appId);
       }
 
-
-      console.log('createGitLabClientByApp',{ providerDetails, app })
-
-      const clientId = providerDetails.client_id;
-      const clientSecret = providerDetails.client_secret;
-      
-     
-      const redirectUriComputed = new URL(providerDetails.redirect_url);
-      redirectUriComputed.searchParams.append("appId", appId);
-      const redirectUri = redirectUriComputed.toString()
+      const clientId = providerDetails.clientId;
+      const clientSecret = providerDetails.clientSecret;
+      const redirectUri = providerDetails.redirectUrl;
 
       return {
-        async getGitLabDetailsGivenCode(code) {
-
-          console.log('createGitLabClientByApp',{ clientId, clientSecret, redirectUri, code, url: redirectUriComputed.toString() })
-
-          const params = new URLSearchParams({
-            client_id: clientId,
-            client_secret: clientSecret,
-            code,
-            grant_type: 'authorization_code',
-            redirect_uri: redirectUriComputed.toString()
-          });
-          
-          let tokenResponse
-          try {
-            tokenResponse = await axios.post('https://gitlab.com/oauth/token', params.toString(), {
-              headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-              }
-            });
-            console.log(tokenResponse);
-          } catch (error) {
-            if (error.response) {
-              console.error('Error response:', error.response.status, error.response.statusText);
-              console.error('Error response data:', error.response.data);
-              console.error('Error response headers:', error.response.headers);
-            } else if (error.request) {
-              console.error('Error request:', error.request);
-            } else {
-              console.error('Error message:', error.message);
-            }
-            console.error('Error config:', error.config);
-            throw error
-          }
-          
-          
-          console.log('tokenResponse',{ data:tokenResponse.data })
-          const accessToken = tokenResponse.data.access_token;
-
-          // Use access token to get user details
-          let userResponse
-          try {
-            userResponse = await axios.get('https://gitlab.com/api/v4/user', {
-              headers: {
-                'Authorization': `Bearer ${accessToken}`
-              }
-            });
-            console.log(userResponse.data);
-          } catch (error) {
-            if (error.response) {
-              console.log('Error Response:', error.response.data);
-              console.log('Error Status:', error.response.status);
-              console.log('Error Headers:', error.response.headers);
-            } else if (error.request) {
-              console.log('Error Request:', error.request);
-            } else {
-              console.log('Error Message:', error.message);
-            }
-            throw error
-          }
-           
-          const userData = userResponse.data;
-
-          console.log('getGitLabDetailsGivenCode', { userData });
-
-          // Transform GitLab user data to match the structure of Google payload
-          return {
-            sub: userData.id.toString(),
-            name: userData.name,
-            given_name: userData.name.split(' ')[0],
-            family_name: userData.name.split(' ').slice(1).join(' '),
-            picture: userData.avatar_url,
-            email: userData.email,
-            email_verified: userData.confirmed_at !== null
-          };
-        },
+        async getProviderDetailsGivenCode(code) {
+          // Implement token exchange and user info retrieval
+        }
       };
-    },
+    }
   };
 }
 
-module.exports = {
-  useGitLabAPI,
-};
+module.exports = { useNewProviderAPI };
 ```
 
-### Updating the route logic
+3. Add the provider to your environment variables:
+```sh
+APP_NAMES=google,gitlab,keycloak,auth0,newprovider
+NEWPROVIDER__CLIENT_ID=your_client_id
+NEWPROVIDER__CLIENT_SECRET=your_client_secret
+NEWPROVIDER__REDIRECT_URL=http://localhost:3000/auth/callback/newprovider
+NEWPROVIDER__AUTH_URL=https://newprovider.com/oauth/authorize
+NEWPROVIDER__OPENID_PROVIDER=true
+```
+
+4. Import and use the provider in `src/routes/auth.js`
 
 ```js
 if (providerId === 'google') {
@@ -155,8 +117,6 @@ if (providerId === 'google') {
       throw new Error(`Unsupported provider: ${providerId}`);
     }
 ```
-
-
 
 # Configuration Steps
 

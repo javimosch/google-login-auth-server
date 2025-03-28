@@ -67,12 +67,36 @@ See external-apis.md or external-app folder for example.
    cp env.md .env
    ```
 
-5. External applications have a config file apps.yml, but sesitive envs can be overriden using the .env file
+5. Configure your applications in the `.env` file. The configuration is divided into two main sections:
 
-```bash
-# {APPID}__{ENVNAME}
-GEORED__EXTERNAL_APP_API_KEY=secret
-```
+   ### Identity Providers (IDPs)
+   Configure OpenID providers like Google, Keycloak, or GitLab:
+   ```bash
+   # Example IDP Configuration (Google)
+   GOOGLE__OPENID_PROVIDER=1
+   GOOGLE__CLIENT_ID=your-client-id
+   GOOGLE__CLIENT_SECRET=your-client-secret
+   GOOGLE__REDIRECT_URL=http://localhost:3000/auth/callback/google
+   GOOGLE__SCOPE=profile email
+   GOOGLE__AUTH_URL=https://accounts.google.com/o/oauth2/v2/auth
+   ```
+
+   ### Sign-in Applications
+   Configure external applications that will use the SSO service:
+   ```bash
+   # Example Sign-in App Configuration
+   MYAPP__EXTERNAL_APP_URL=http://localhost:8085
+   MYAPP__EXTERNAL_APP_API_KEY=your-api-key
+   MYAPP__EXTERNAL_APP_LINK_FIELDS=username,password
+   MYAPP__EXTERNAL_APP_API_URL=http://localhost:3000
+   MYAPP__EXTERNAL_API_GET_EXTERNAL_ID_ROUTE=/auth/external-id
+   MYAPP__EXTERNAL_API_GET_JWT_ROUTE=/auth/get-jwt
+   ```
+
+   Add your app to APP_NAMES to enable it:
+   ```bash
+   APP_NAMES=GOOGLE,KEYCLOAK,GITLAB,MYAPP
+   ```
 
 ## **Usage**
 
