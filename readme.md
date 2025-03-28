@@ -131,6 +131,18 @@ Ensure that your Docker environment is properly set up before running this comma
 - Currently supports only one external application
 - Requires the external application to implement JWT-based authentication
 
+## Troubleshooting
+
+### Invalid redirect URI
+
+![alt text](/docs/example-invalid-redirect-uri.png)
+
+The error message indicates that the redirect URI is invalid. This is because the redirect URI must be whitelisted in the idp client configuration.
+
+#### Whitelist in keycloak 
+
+![alt text](/docs/example-keycloak-redirect-uri-whitelist.png)
+
 ## **Future Enhancements**
 
 - Support for multiple external applications
