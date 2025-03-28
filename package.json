@@ -4,7 +4,8 @@
   "description": "Proof of Concept for integrating Google OAuth2 authentication with an external application",
   "main": "src/server.js",
   "scripts": {
-    "dev": "concurrently \"npx nodemon external-app/api\" \"npx nodemon src/server.js\"",
+    "dev": "npx nodemon src/server.js",
+    "dev:old": "concurrently \"npx nodemon external-app/api\" \"npx nodemon src/server.js\"",
     "externalAppServer": "node external-app/api",
     "start": "node src/server.js",
     "startAll": "concurrently \"node external-app/api\" \"node src/server.js\""
