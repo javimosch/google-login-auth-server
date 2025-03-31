@@ -19,6 +19,7 @@ router.get('/', async (req, res) => {
     apps: global.applications.filter(a => !a.openidProvider),
     message: message,
     clientId: req.query.clientId ?? '',
+    idps: global.applications.filter(a => a.openidProvider)
   });
 });
 

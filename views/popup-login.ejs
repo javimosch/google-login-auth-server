@@ -90,9 +90,10 @@
                 linkedData
               })
 
-              console.log('linkedData', {
-                linkedData
-              });
+              if(!linkedData.email){
+                alert(`We were unable to retrieve your email from your idp (${providerId}). Please verify account in your idp and try again.`)
+                return
+              }
 
               // Fetch to /link-google-account (POST) with linkedData as body
               fetch('/auth/link-google-account', {

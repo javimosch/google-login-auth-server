@@ -10,6 +10,8 @@ function useGitLabAPI() {
       }
 
       console.log('createGitLabClientByApp',{
+        providerId,
+        appId,
         providerDetails,
         app
       })
@@ -17,31 +19,30 @@ function useGitLabAPI() {
       const clientId = providerDetails.clientId;
       const clientSecret = providerDetails.clientSecret;
       
-      const redirectUriComputed = new URL(providerDetails.redirectUrl);
+      const redirectUriComputed = new URL(providerDetails.redirectUrl+'/'+appId);
       const redirectUri = redirectUriComputed.toString()
 
       return {
         async getGitLabDetailsGivenCode(code) {
           console.log('getGitLabDetailsGivenCode - Starting with code:', code.substring(0, 10) + '...');
 
-          console.log('Token Request Parameters:', {
-            clientId,
-            clientSecret: '***',
-            redirectUri,
-            url: redirectUriComputed.toString()
-          });
+          
 
-          const params = new URLSearchParams({
+          let payload = {
             client_id: clientId,
             client_secret: clientSecret,
             code,
             grant_type: 'authorization_code',
             redirect_uri: redirectUriComputed.toString()
-          });
-          
+          }
+
+          const params = new URLSearchParams(payload);
+
           let tokenResponse;
           try {
-            console.log('Requesting token from GitLab...');
+            console.log('Requesting token from GitLab...',{
+              payload
+            });
             tokenResponse = await axios.post('https://gitlab.com/oauth/token', params.toString(), {
               headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'

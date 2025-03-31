@@ -5,6 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "dev": "npx nodemon src/server.js",
+    "dev:old": "concurrently \"npx nodemon external-app/api\" \"npx nodemon src/server.js\"",
     "externalAppServer": "node external-app/api",
     "start": "node src/server.js",
     "lint": "eslint --ext .js,.vue --ignore-path .gitignore --fix src",

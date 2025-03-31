@@ -9,6 +9,12 @@ RUN apk add --no-cache tzdata && \
     echo "$TZ" > /etc/timezone
 USER node
 
+# Install Python and build dependencies
+RUN apk add --no-cache python3 make g++
+
+# Copy package.json and package-lock.json
+COPY package*.json ./
+
 FROM node:${NODE_VERSION} AS node_build
 
 WORKDIR /home/node/app
