@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const ClientConfig = require("../models/ClientConfig");
-require("../strategies/keycloak");
 
 router.get('/', async (req, res) => {
   // Filter out IDP apps (those with openidProvider=1)
@@ -19,6 +18,7 @@ router.get('/', async (req, res) => {
   res.render('index', {
     apps: global.applications.filter(a => !a.openidProvider),
     message: message,
+    clientId: req.query.clientId ?? '',
   });
 });
 

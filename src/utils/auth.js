@@ -1,7 +1,33 @@
-const { useGoogleAPI } = require("../config/google");
-const { useGitLabAPI } = require("../config/gitlab");
-const { useAuth0API } = require("../config/auth0");
-const { useKeycloakAPI } = require("../config/keycloak");
+/**
+ * Handles OAuth authorization flow for different providers
+ * @param {Object} req Express request object
+ * @param {Object} res Express response object
+ * @param {Object} config Provider identifier
+ */
+function handleOAuthByClientConfig(req, res, config) {
+  const redirectUri = process.env.CONFIG_CALLBACK_URL
+  if (config.provider === 'keycloak') {
+    const clientId = config.clientId
+    const authUrl = config.authorizationURL
+    const scope = config.scopes.join(' ')
+
+    let callbackUrl = new URL(redirectUri);
+    callbackUrl += "/" + config.provider;
+    callbackUrl += "/" + config.applications[0];
+    callbackUrl += "/" + config._id;
+
+    const authUrlObj = new URL(authUrl);
+    let clientParamName = authUrlObj.toString().includes('auth0')?'client':'client_id'
+
+    const url = new URL(authUrlObj.toString());
+    url.searchParams.append(clientParamName, clientId);
+    url.searchParams.append("redirect_uri", callbackUrl.toString());
+    url.searchParams.append("response_type", "code");
+    url.searchParams.append("scope", scope);
+
+    res.redirect(url.toString());
+  }
+}
 
 /**
  * Handles OAuth authorization flow for different providers
@@ -296,15 +322,16 @@ async function getExternalToken(externalUserId, appId) {
  * Gets the appropriate provider client based on the provider ID
  * @param {string} providerId Provider identifier
  * @param {string} appId Application identifier
+ * @param {Object} config
  * @returns {Object} Provider client with getDetailsGivenCode method
  * @throws {Error} If provider is not supported
  */
-function getProviderClient(providerId, appId) {
+function getProviderClient(providerId, appId, config = null) {
   switch (providerId) {
     case 'google': {
       const { useGoogleAPI } = require('../config/google');
       const { createGoogleClientByApp } = useGoogleAPI();
-      const client = createGoogleClientByApp(providerId, appId);
+      const client = createGoogleClientByApp(providerId, appId, config);
       return {
         getDetailsGivenCode: client.getGoogleDetailsGivenCode.bind(client)
       };
@@ -312,7 +339,7 @@ function getProviderClient(providerId, appId) {
     case 'gitlab': {
       const { useGitLabAPI } = require('../config/gitlab');
       const { createGitLabClientByApp } = useGitLabAPI();
-      const client = createGitLabClientByApp(providerId, appId);
+      const client = createGitLabClientByApp(providerId, appId, config);
       return {
         getDetailsGivenCode: client.getGitLabDetailsGivenCode.bind(client)
       };
@@ -320,7 +347,7 @@ function getProviderClient(providerId, appId) {
     case 'auth0': {
       const { useAuth0API } = require('../config/auth0');
       const { createAuth0ClientByApp } = useAuth0API();
-      const client = createAuth0ClientByApp(providerId, appId);
+      const client = createAuth0ClientByApp(providerId, appId, config);
       return {
         getDetailsGivenCode: client.getDetailsGivenCode.bind(client)
       };
@@ -328,7 +355,7 @@ function getProviderClient(providerId, appId) {
     case 'keycloak': {
       const { useKeycloakAPI } = require('../config/keycloak');
       const { createKeycloakClientByApp } = useKeycloakAPI();
-      const client = createKeycloakClientByApp(providerId, appId);
+      const client = createKeycloakClientByApp(providerId, appId, config);
       return {
         getDetailsGivenCode: client.getKeycloakDetailsGivenCode.bind(client)
       };
@@ -340,6 +367,7 @@ function getProviderClient(providerId, appId) {
 
 module.exports = {
   handleOAuth,
+  handleOAuthByClientConfig,
   getExternalUserIdGivenAppAccountDetails,
   getExternalToken,
   getProviderClient

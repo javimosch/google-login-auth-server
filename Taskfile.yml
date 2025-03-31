@@ -119,6 +119,15 @@ tasks:
     cmds:
       - docker compose up -d --force-recreate --renew-anon-volumes --remove-orphans keycloak
 
+  keycloak.restart:
+    desc: "🚀 \e[32mRedémarrer keycloak\e[0m"
+    aliases:
+      - keycloak-restart
+    cmds:
+        - docker compose rm --force --stop --volumes keycloak
+        - docker compose up -d keycloak
+    ignore_error: true
+
   container.build:
     desc: 'Rebuild the project'
     aliases:

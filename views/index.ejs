@@ -12,7 +12,7 @@
 
     <% if (message === '') { %>
       <h1 class="text-3xl font-bold mb-6">External Application</h1>
-      <div class="mb-6 w-full max-w-xs">
+      <div class="mb-6 w-full max-w-xs" style="display:none">
           <label for="appId" class="block text-gray-700 text-sm font-semibold mb-2">App ID</label>
           <select id="appId"
             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:border-blue-500">
@@ -41,7 +41,7 @@
             Login with Auth0
           </button>
         </div>
-        <div id="message" class="text-lg text-gray-700 mb-4"></div> <!-- To display messages from the popup -->
+        <div id="message" class="text-lg text-gray-700 mb-4">Authentification en cours ...</div> <!-- To display messages from the popup -->
         <div>
           <button id="redirectBtn" style="display:none" onclick="redirectToExternalApp()"
             class="bg-green-500 text-white font-semibold py-2 px-4 rounded shadow hover:bg-green-600 transition duration-200">Click
@@ -51,6 +51,10 @@
       <div id="message" class="text-lg text-gray-700 mb-4"><%= message %></div>
   <% } %>
   <script>
+
+    <% if (clientId !== '') { %>
+        window.open(`/auth/authorize/client/<%= clientId %>`, 'Popup Window', 'width=600,height=400');
+    <% } %>
 
     function useOpenIdPopupLogin(providerId, options = {}) {
       let state = {
@@ -73,6 +77,7 @@
       function triggerPopup() {
         window.open(`/auth/authorize/${providerId}?appId=${window.appId.value || ''}`, 'Popup Window', 'width=600,height=400');
       }
+
 
       function bindBtn(el) {
         el.addEventListener('click', triggerPopup)

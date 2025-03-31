@@ -31,6 +31,19 @@
         >
       </div>
 
+      <div class="flex flex-col hidden">
+        <label for="applications" class="mb-2 text-gray-700 font-medium">Applications</label>
+        <select
+                id="applications"
+                multiple
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="georedv3" selected>Geored V3</option>
+          <option value="styx">STYX</option>
+        </select>
+      </div>
+
       <div class="flex flex-col">
         <label for="provider" class="mb-2 text-gray-700 font-medium">Fournisseur d'accès</label>
         <select
@@ -39,9 +52,7 @@
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Sélectionnez un fournisseur</option>
-          <option value="oauth2">OAuth2</option>
           <option value="google">Google</option>
-          <option value="github">GitHub</option>
           <option value="gitlab">GitLab</option>
           <option value="keycloak">Keycloak</option>
           <option value="auth0">Auth0</option>
@@ -114,17 +125,6 @@
         >
       </div>
 
-      <div class="flex flex-col" data-field="redirectURI">
-        <label for="redirectURI" class="mb-2 text-gray-700 font-medium">URI de redirection</label>
-        <input
-                type="text"
-                id="redirectURI"
-                placeholder="Saisissez l'URI de redirection"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-      </div>
-
       <div class="flex flex-col" data-field="scopes">
         <label for="scopes" class="mb-2 text-gray-700 font-medium">Scopes</label>
         <input
@@ -184,21 +184,37 @@
     });
   }
 
+  const fields = {
+    google: ["scopes"],
+    gitlab: ["scopes"],
+    keycloak: ["clientId", "clientSecret", "authorizationURL", "tokenURL", "userInfoURL", "scopes"],
+    auth0: ["scopes"]
+  };
+
   async function submitForm(event) {
     event.preventDefault();
     const configId = document.getElementById("configId").value;
     const data = {
       clientName: document.getElementById("clientName").value,
-      clientId: document.getElementById("clientId").value,
-      clientSecret: document.getElementById("clientSecret").value,
-      authorizationURL: document.getElementById("authorizationURL").value,
-      tokenURL: document.getElementById("tokenURL").value,
-      userInfoURL: document.getElementById("userInfoURL").value,
-      redirectURI: document.getElementById("redirectURI").value,
-      domain: document.getElementById("domain").value,
-      scopes: document.getElementById("scopes").value.split(","),
-      provider: document.getElementById("provider").value
+      applications: document.getElementById("applications").value,
+      provider: document.getElementById("provider").value,
+      clientId: null,
+      clientSecret: null,
+      authorizationURL: null,
+      tokenURL: null,
+      userInfoURL: null,
+      scopes: null,
     };
+
+    if (data.provider && fields[data.provider]) {
+      fields[data.provider].forEach(fieldName => {
+        if (fieldName === 'scopes') {
+          data[fieldName] = document.getElementById(fieldName).value.split(",");
+        } else {
+          data[fieldName] = document.getElementById(fieldName).value;
+        }
+      });
+    }
 
     let response;
     if (configId) {
@@ -232,8 +248,6 @@
     document.getElementById("authorizationURL").value = config.authorizationURL;
     document.getElementById("tokenURL").value = config.tokenURL;
     document.getElementById("userInfoURL").value = config.userInfoURL;
-    document.getElementById("redirectURI").value = config.redirectURI;
-    document.getElementById("domain").value = config.domain;
     document.getElementById("scopes").value = config.scopes.join(",");
     document.getElementById("provider").value = config.provider;
     updateFormFields()
@@ -250,14 +264,6 @@
 
   function updateFormFields() {
     const provider = document.getElementById("provider").value;
-    const fields = {
-      oauth2: ["clientId", "clientSecret", "authorizationURL", "tokenURL", "redirectURI", "scopes"],
-      google: ["clientId", "clientSecret", "redirectURI", "scopes"],
-      github: ["clientId", "clientSecret", "redirectURI", "scopes"],
-      gitlab: ["clientId", "clientSecret", "redirectURI", "scopes"],
-      keycloak: ["clientId", "clientSecret", "authorizationURL", "tokenURL", "userInfoURL", "redirectURI", "scopes"],
-      auth0: ["clientId", "clientSecret", "domain", "redirectURI", "clientID", "scopes"]
-    };
 
     // Cache tous les champs
     document.querySelectorAll('[data-field]').forEach(field => {
@@ -286,17 +292,11 @@
       google: {
         scopes: "profile,email",
       },
-      oauth2: {
-        scopes: "openid,profile,email",
-      },
       auth0: {
         scopes: "openid,profile,email",
       },
       gitlab: {
         scopes: "openid,profile,email,api,read_api",
-      },
-      github: {
-        scopes: "user:email",
       },
     };
 

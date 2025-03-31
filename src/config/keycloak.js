@@ -2,18 +2,33 @@ const axios = require("axios");
 
 function useKeycloakAPI() {
   return {
-    createKeycloakClientByApp(providerId, appId) {
-      let providerDetails = global.useAppDetails(providerId, 'keycloak');
+    createKeycloakClientByApp(providerId, appId, config = null) {
+      let clientId = '';
+      let clientSecret = '';
+      let redirectUri = '';
+      let tokenEndpoint = '';
+      let userInfoEndpoint = '';
+
+      if (config === null) {
+        let providerDetails = global.useAppDetails(providerId, 'keycloak');
+
+        clientId = providerDetails.clientId;
+        clientSecret = providerDetails.clientSecret;
+        redirectUri = providerDetails.redirectUrl;
+        tokenEndpoint = providerDetails.tokenEndpoint;
+        userInfoEndpoint = providerDetails.userinfoEndpoint;
+      } else {
+        clientId = config.clientId;
+        clientSecret = config.clientSecret;
+        redirectUri = process.env.CONFIG_CALLBACK_URL + '/keycloak';
+        tokenEndpoint = config.tokenURL;
+        userInfoEndpoint = config.userInfoURL;
+      }
+
       let app = global.useAppDetails(appId, 'keycloak');
       if (!app) {
         throw new Error("createKeycloakClientByApp: invalid appId: " + appId);
       }
-
-      const clientId = providerDetails.clientId;
-      const clientSecret = providerDetails.clientSecret;
-      const redirectUri = providerDetails.redirectUrl;
-      const tokenEndpoint = providerDetails.tokenEndpoint;
-      const userInfoEndpoint = providerDetails.userinfoEndpoint;
 
       console.log('createKeycloakClientByApp', {
         providerId,
@@ -24,7 +39,10 @@ function useKeycloakAPI() {
       });
 
       const redirectUriComputed = new URL(redirectUri);
-      const fullRedirectUri = redirectUriComputed.toString() + '/' + appId;
+      let fullRedirectUri = redirectUriComputed.toString() + '/' + appId;
+      if (config !== null) {
+        fullRedirectUri += '/' + config._id;
+      }
 
       return {
         async getKeycloakDetailsGivenCode(code) {

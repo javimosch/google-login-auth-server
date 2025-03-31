@@ -1,11 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const {
+  handleOAuthByClientConfig,
   handleOAuth,
   getExternalUserIdGivenAppAccountDetails,
   getExternalToken,
   getProviderClient
 } = require("../utils/auth");
+const ClientConfig = require("../models/ClientConfig");
 
 router.get("/authorize/:providerId", (req, res) => {
   const providerId = req.params.providerId;
@@ -17,12 +19,23 @@ router.get("/authorize/:providerId", (req, res) => {
   handleOAuth(req, res, providerId);
 });
 
+router.get("/authorize/client/:clientId", async (req, res) => {
+  const clientId = req.params.clientId;
+  const config = await ClientConfig.findOne({_id: clientId});
+  if (!config) {
+    console.error(`Invalid providerId specified: ${clientId}`);
+    return res.status(400).send("Invalid provider specified");
+  }
+  console.log('Config client', {config})
+  handleOAuthByClientConfig(req, res, config);
+});
+
 /**
  * openid idp will redirect to this route
  */
-router.get("/callback/:providerId/:appId?", async (req, res) => {
+router.get("/callback/:providerId/:appId?/:configId?", async (req, res) => {
   const { code } = req.query;
-  const decodedState = { appId: req.params.appId };
+  const decodedState = { appId: req.params.appId, configId: req.params.configId };
   const providerId = req.params.providerId;
   const routePath = `/callback/${providerId}`;
 
@@ -31,11 +44,16 @@ router.get("/callback/:providerId/:appId?", async (req, res) => {
   });
 
   try {
-    const { appId } = decodedState;
+    const { appId, configId } = decodedState;
     let app = global.useAppDetails(appId, `/callback/${providerId}`);
+    console.log("App data:", {app});
+    let config = null;
+    if (configId) {
+      config = await ClientConfig.findOne({_id: configId});
+    }
 
     // Get provider client and fetch user details
-    const providerClient = getProviderClient(providerId, appId);
+    const providerClient = getProviderClient(providerId, appId, config);
     const payload = await providerClient.getDetailsGivenCode(code);
     const idpEmail = payload.email;
 
