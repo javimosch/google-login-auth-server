@@ -125,6 +125,17 @@
         >
       </div>
 
+      <div class="flex flex-col" data-field="audience">
+        <label for="audience" class="mb-2 text-gray-700 font-medium">URL de l'audience des API</label>
+        <input
+                type="text"
+                id="audience"
+                placeholder="Saisissez l'audience des API"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+      </div>
+
       <div class="flex flex-col" data-field="scopes">
         <label for="scopes" class="mb-2 text-gray-700 font-medium">Scopes</label>
         <input
@@ -188,7 +199,7 @@
     google: ["scopes"],
     gitlab: ["scopes"],
     keycloak: ["clientId", "clientSecret", "authorizationURL", "tokenURL", "userInfoURL", "scopes"],
-    auth0: ["scopes"]
+    auth0: ["clientId", "clientSecret", "authorizationURL", "tokenURL", "userInfoURL", "audience", "scopes"]
   };
 
   async function submitForm(event) {
@@ -203,6 +214,7 @@
       authorizationURL: null,
       tokenURL: null,
       userInfoURL: null,
+      audience: null,
       scopes: null,
     };
 
@@ -250,6 +262,7 @@
     document.getElementById("userInfoURL").value = config.userInfoURL;
     document.getElementById("scopes").value = config.scopes.join(",");
     document.getElementById("provider").value = config.provider;
+    document.getElementById("audience").value = config.audience;
     updateFormFields()
   }
 
@@ -288,12 +301,19 @@
     const defaults = {
       keycloak: {
         scopes: "openid,profile,email",
+        authorizationURL: "https://example/realms/master/protocol/openid-connect/auth",
+        tokenURL: "https://example/realms/master/protocol/openid-connect/token",
+        userInfoURL: "https://example/realms/master/protocol/openid-connect/userinfo",
       },
       google: {
         scopes: "profile,email",
       },
       auth0: {
         scopes: "openid,profile,email",
+        audience: "https://example.auth0.com/api/v2/",
+        authorizationURL: "https://example.auth0.com/login",
+        tokenURL: "https://example.auth0.com/api/oauth/token",
+        userInfoURL: "https://example.auth0.com/userinfo",
       },
       gitlab: {
         scopes: "openid,profile,email,api,read_api",
@@ -303,7 +323,13 @@
     if (defaults[provider]) {
       Object.entries(defaults[provider]).forEach(([field, value]) => {
         const input = document.getElementById(field);
-        if (input) input.value = value;
+        if (input) {
+          if (field !== 'scopes') {
+            input.placeholder = value;
+          } else {
+            input.value = value;
+          }
+        }
       });
     }
   }

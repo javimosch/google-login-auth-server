@@ -6,27 +6,38 @@
  */
 function handleOAuthByClientConfig(req, res, config) {
   const redirectUri = process.env.CONFIG_CALLBACK_URL
-  if (config.provider === 'keycloak') {
-    const clientId = config.clientId
-    const authUrl = config.authorizationURL
-    const scope = config.scopes.join(' ')
-
-    let callbackUrl = new URL(redirectUri);
-    callbackUrl += "/" + config.provider;
-    callbackUrl += "/" + config.applications[0];
-    callbackUrl += "/" + config._id;
-
-    const authUrlObj = new URL(authUrl);
-    let clientParamName = authUrlObj.toString().includes('auth0')?'client':'client_id'
-
-    const url = new URL(authUrlObj.toString());
-    url.searchParams.append(clientParamName, clientId);
-    url.searchParams.append("redirect_uri", callbackUrl.toString());
-    url.searchParams.append("response_type", "code");
-    url.searchParams.append("scope", scope);
-
-    res.redirect(url.toString());
+  let callbackUrl = new URL(redirectUri);
+  callbackUrl += "/" + config.provider;
+  callbackUrl += "/" + config.applications[0];
+  let clientId = ''
+  let authUrl = ''
+  const scope = config.scopes.join(' ')
+  if (config.provider === 'keycloak' || config.provider === 'auth0') {
+    clientId = config.clientId
+    authUrl = config.authorizationURL
+    if (config.provider === 'keycloak') {
+      callbackUrl += "/" + config._id;
+    }
+  } else {
+    let app = global.useAppDetails(
+      config.provider,
+      `/auth/authorize/${config.provider}`
+    );
+    clientId = app.clientId
+    authUrl = app.authUrl
   }
+
+  const authUrlObj = new URL(authUrl);
+  let clientParamName = authUrlObj.toString().includes('auth0')?'client':'client_id'
+
+  const url = new URL(authUrlObj.toString());
+  url.searchParams.append(clientParamName, clientId);
+  url.searchParams.append("redirect_uri", callbackUrl.toString());
+  url.searchParams.append("response_type", "code");
+  url.searchParams.append("scope", scope);
+  url.searchParams.append("state", config._id);
+
+  res.redirect(url.toString());
 }
 
 /**
@@ -331,22 +342,22 @@ async function getExternalToken(externalUserId, appId) {
  */
 function getProviderClient(providerId, appId, config = null) {
   if(providerId.toLowerCase().includes('keycloak')) {
-    return getKeycloakClientByApp(providerId, appId);
+    return getKeycloakClientByApp(providerId, appId, config);
   }
   if(providerId.toLowerCase().includes('google')) {
-    return getGoogleClientByApp(providerId, appId);
+    return getGoogleClientByApp(providerId, appId, config);
   }
   if(providerId.toLowerCase().includes('gitlab')) {
-    return getGitLabClientByApp(providerId, appId);
+    return getGitLabClientByApp(providerId, appId, config);
   }
   if(providerId.toLowerCase().includes('auth0')) {
-    return getAuth0ClientByApp(providerId, appId);
+    return getAuth0ClientByApp(providerId, appId, config);
   }
 
   throw new Error(`Unsupported provider: ${providerId}`);
 }
 
-function getAuth0ClientByApp(providerId, appId) {
+function getAuth0ClientByApp(providerId, appId, config = null) {
   const { useAuth0API } = require('../config/auth0');
   const { createAuth0ClientByApp } = useAuth0API();
   const client = createAuth0ClientByApp(providerId, appId, config);
@@ -355,7 +366,7 @@ function getAuth0ClientByApp(providerId, appId) {
   };
 }
 
-function getGitLabClientByApp(providerId, appId) {
+function getGitLabClientByApp(providerId, appId, config = null) {
   const { useGitLabAPI } = require('../config/gitlab');
   const { createGitLabClientByApp } = useGitLabAPI();
   const client = createGitLabClientByApp(providerId, appId, config);
@@ -364,7 +375,7 @@ function getGitLabClientByApp(providerId, appId) {
   };
 }
 
-function getGoogleClientByApp(providerId, appId) {
+function getGoogleClientByApp(providerId, appId, config = null) {
   const { useGoogleAPI } = require('../config/google');
   const { createGoogleClientByApp } = useGoogleAPI();
   const client = createGoogleClientByApp(providerId, appId, config);
@@ -373,7 +384,7 @@ function getGoogleClientByApp(providerId, appId) {
   };
 }
 
-function getKeycloakClientByApp(providerId, appId) {
+function getKeycloakClientByApp(providerId, appId, config = null) {
   const { useKeycloakAPI } = require('../config/keycloak');
   const { createKeycloakClientByApp } = useKeycloakAPI();
   const client = createKeycloakClientByApp(providerId, appId, config);

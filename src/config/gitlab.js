@@ -2,7 +2,7 @@ const axios = require("axios");
 
 function useGitLabAPI() {
   return {
-    createGitLabClientByApp(providerId,appId) {
+    createGitLabClientByApp(providerId, appId, config = null) {
       let providerDetails = global.useAppDetails(providerId, 'gitlab');
       let app = global.useAppDetails(appId, 'gitlab');
       if (!app) {
@@ -19,7 +19,7 @@ function useGitLabAPI() {
       const clientId = providerDetails.clientId;
       const clientSecret = providerDetails.clientSecret;
       
-      const redirectUriComputed = new URL(providerDetails.redirectUrl+'/'+appId);
+      const redirectUriComputed = new URL(process.env.CONFIG_CALLBACK_URL + '/gitlab' + '/' + appId);
       const redirectUri = redirectUriComputed.toString()
 
       return {
@@ -33,7 +33,7 @@ function useGitLabAPI() {
             client_secret: clientSecret,
             code,
             grant_type: 'authorization_code',
-            redirect_uri: redirectUriComputed.toString()
+            redirect_uri: redirectUri
           }
 
           const params = new URLSearchParams(payload);

@@ -46,6 +46,8 @@ services:
       retries: 5
     depends_on:
       - mongo
+    ports:
+      - '3000:3000'
     labels:
       - 'traefik.enable=true'
       - 'traefik.http.routers.sso.rule=Host(`sso.dev.localhost`)'
@@ -69,8 +71,6 @@ services:
       - target: 27017
         published: 27020
         protocol: tcp
-    volumes:
-      - mongo-data:/var/lib/mongo
     restart: unless-stopped
     labels:
       - "traefik.enable=false"
@@ -110,5 +110,4 @@ networks:
     external: true
 
 volumes:
-    mongo-data: {}
     postgres_data:

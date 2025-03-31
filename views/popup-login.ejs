@@ -17,11 +17,11 @@
     <script>
         const providerId = '<%= providerId || "" %>';  
         const appId = '<%= appId || "" %>';
-        
+        const configId = '<%= configId || "" %>';
 
         function initialize() {
           const message = {
-            type: `${providerId}_auth`,
+            type: configId === '' ? `${providerId}_auth` : 'config_auth',
             data: {
               user: {
                 name: '<%= user.name %>', // User's name
@@ -83,8 +83,6 @@
                 linkedData[key] = value;
               });
 
-
-              
               linkedData.email = email
               console.log('linkedData', {
                 linkedData
@@ -95,8 +93,8 @@
                 return
               }
 
-              // Fetch to /link-google-account (POST) with linkedData as body
-              fetch('/auth/link-google-account', {
+              // Fetch to /link-account (POST) with linkedData as body
+              fetch('/auth/link-account', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json'
@@ -106,8 +104,7 @@
                   appId,
                   providerId
                 })  // Send linkedData as JSON
-              })
-                .then(response => {
+              }).then(response => {
                   if (response.status === 422) {
                     // Show error message for invalid credentials
                     errorMessage.classList.remove('hidden');
@@ -119,8 +116,7 @@
                     throw new Error('Network response was not ok');
                 }
                   return response.json();  // Parse the JSON from the response
-                })
-                .then(response => {
+                }).then(response => {
                   const redirectUrl = response.redirectUrl;
                   // You might want to do something with redirectUrl, like redirecting
                   if (!redirectUrl) {
@@ -134,31 +130,24 @@
                 .catch(error => {
                   console.error('There was a problem with the fetch operation:', error);
                 });
-
-
-
             }
 
             // Error message span
-          const errorMessage = document.createElement('span');
-          errorMessage.className = 'text-red-500 hidden';  // Initially hidden
-          errorMessage.innerText = 'Invalid credentials';
-          formContainer.appendChild(errorMessage);
+            const errorMessage = document.createElement('span');
+            errorMessage.className = 'text-red-500 hidden';  // Initially hidden
+            errorMessage.innerText = 'Invalid credentials';
+            formContainer.appendChild(errorMessage);
 
 
             formContainer.appendChild(form);
             document.body.appendChild(formContainer);
-          } else {
-
-            if (window.opener) {
-              window.opener.postMessage(message, '*'); // Sends the message to the parent window
-              window.close(); // Close the popup window
-            }
+          } else if (window.opener) {
+            window.opener.postMessage(message, '*'); // Sends the message to the parent window
+            window.close(); // Close the popup window
           }
         }
-      initialize();
+        initialize();
     </script>
-
     <% } %>
 </body>
 

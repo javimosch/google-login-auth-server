@@ -10,15 +10,20 @@ const ClientConfigSchema = new mongoose.Schema({
       return encrypt(v);
     },
     get: function(v) {
-      return decrypt(v);
+      if (v) {
+        return decrypt(v);
+      }
+
+      return null;
     }
   },
   authorizationURL: String,
   tokenURL: String,
   userInfoURL: String,
+  audience: String,
   scopes: [String],
   applications: [String],
-  provider: String // "google", "github", "keycloak", etc.
+  provider: String // "google", "gitlab", "keycloak", etc.
 });
 ClientConfigSchema.set('toObject', { getters: true });
 ClientConfigSchema.set('toJSON', { getters: true });

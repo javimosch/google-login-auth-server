@@ -22,7 +22,8 @@
 
     <% if (message === '') { %>
       <h1 class="text-3xl font-bold mb-6">External Application</h1>
-      <div class="mb-6 w-full max-w-xs" style="display:none">
+      <% if (configId === '') { %>
+      <div class="mb-6 w-full max-w-xs">
           <label for="appId" class="block text-gray-700 text-sm font-semibold mb-2">App ID</label>
           <select id="appId"
             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:border-blue-500">
@@ -33,15 +34,11 @@
               </option>
               <% }) %>
           </select>
-
-          <div id="buttons"
-            class="buttons">
-
+          <div id="buttons" class="buttons">
           </div>
-
-
-        </div>
-        <div id="message" class="text-lg text-gray-700 mb-4">Authentification en cours ...</div> <!-- To display messages from the popup -->
+      </div>
+      <% } %>
+        <div id="message" class="text-lg text-gray-700 mb-4">Authentication in progress ...</div> <!-- To display messages from the popup -->
         <div>
           <button id="redirectBtn" style="display:none" onclick="redirectToExternalApp()"
             class="bg-green-500 text-white font-semibold py-2 px-4 rounded shadow hover:bg-green-600 transition duration-200">Click
@@ -51,10 +48,13 @@
       <div id="message" class="text-lg text-gray-700 mb-4"><%= message %></div>
   <% } %>
   <script>
-
-    <% if (clientId !== '') { %>
-        window.open(`/auth/authorize/client/<%= clientId %>`, 'Popup Window', 'width=600,height=400');
-    <% } %>
+    const toggleRedirectButton = (isVisible) => {
+      if (isVisible) {
+        redirectBtn.style.display = 'block'
+      } else {
+        redirectBtn.style.display = 'none'
+      }
+    }
 
     function useOpenIdPopupLogin(providerId, options = {}) {
       let state = {
@@ -65,19 +65,21 @@
           event
         })
         if (event.data.type === `${providerId.toLowerCase()}_auth`) {
-          document.getElementById('message').innerText = 'Received from popup: ' + JSON.stringify(event.data);
           state.redirectUrl = event.data.data.redirectUrl
+          if (state.redirectUrl) {
+            document.getElementById('message').innerText = 'Authentication success : ';
+          } else {
+            document.getElementById('message').innerText = 'Received from popup: ' + JSON.stringify(event.data);
+          }
           if (options.onPopupDataReceived) {
             options.onPopupDataReceived(event.data, state)
           }
         }
       });
 
-
       function triggerPopup() {
         window.open(`/auth/authorize/${providerId}?appId=${window.appId.value || ''}`, 'Popup Window', 'width=600,height=400');
       }
-
 
       function bindBtn(el) {
         el.addEventListener('click', triggerPopup)
@@ -97,16 +99,16 @@
 
     let getState = null
 
-    const toogleRedirectButton = (isVisible) => {
-      if (isVisible) {
-        redirectBtn.style.display = 'block'
-      } else {
-        redirectBtn.style.display = 'none'
+    <% if (configId !== '') { %>
+    const { getState: getAppState } = useOpenIdPopupLogin('config', {
+      onPopupDataReceived(data, state) {
+        toggleRedirectButton(!!state.redirectUrl)
+        getState = getAppState
       }
-    }
-
+    })
+    window.open(`/auth/authorize/config/<%= configId %>`, 'Popup Window', 'width=600,height=400');
+    <% } else { %>
     window.idps.forEach(app => {
-
       console.log('Adding button for idp', {app})
 
       let div = document.createElement('div')
@@ -124,20 +126,18 @@
       const { getState: getAppState } = useOpenIdPopupLogin(app.appId, {
         el: window[`button_${app.appId}`],
         onPopupDataReceived(data, state) {
-          toogleRedirectButton(!!state.redirectUrl)
+          toggleRedirectButton(!!state.redirectUrl)
           getState = getAppState
         }
       })
-
-
     })
+    <% } %>
 
     function redirectToExternalApp() {
       if (getState().redirectUrl) {
         location.href = getState().redirectUrl
       }
     }
-
   </script>
 
 </body>

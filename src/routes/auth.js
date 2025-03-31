@@ -22,11 +22,11 @@ router.get("/authorize/:providerId", (req, res) => {
   handleOAuth(req, res, providerId);
 });
 
-router.get("/authorize/client/:clientId", async (req, res) => {
-  const clientId = req.params.clientId;
-  const config = await ClientConfig.findOne({_id: clientId});
+router.get("/authorize/config/:configId", async (req, res) => {
+  const configId = req.params.configId;
+  const config = await ClientConfig.findOne({_id: configId});
   if (!config) {
-    console.error(`Invalid providerId specified: ${clientId}`);
+    console.error(`Invalid providerId specified: ${configId}`);
     return res.status(400).send("Invalid provider specified");
   }
   console.log('Config client', {config})
@@ -53,7 +53,10 @@ router.get("/callback/:providerId/:appId?/:configId?", async (req, res) => {
     let config = null;
     if (configId) {
       config = await ClientConfig.findOne({_id: configId});
+    } else if (req.query.state) {
+      config = await ClientConfig.findOne({_id: req.query.state});
     }
+    console.log('config client', {config})
 
     // Get provider client and fetch user details
     const providerClient = getProviderClient(providerId, appId, config);
@@ -93,6 +96,7 @@ router.get("/callback/:providerId/:appId?/:configId?", async (req, res) => {
       linkFields: linkFields.join(","),
       appId,
       providerId,
+      configId: config === null ? '' : config._id,
     });
   } catch (error) {
     console.error("Authentication error:", {
@@ -106,19 +110,19 @@ router.get("/callback/:providerId/:appId?/:configId?", async (req, res) => {
 });
 
 /**
- * Triggers a verification and linking process for a Google account
+ * Triggers a verification and linking process for an auth provider account
  * on an external application. This route is called when a popup
  * (if no linked account exists) initiates a request to link a
- * user's Google account.
+ * user's account.
  */
-router.post("/link-google-account", async (req, res) => {
-  console.log("/link-google-account", {
+router.post("/link-account", async (req, res) => {
+  console.log("/link-account", {
     body: req.body,
   });
 
   let payload = req.body.payload; // from popup-login.ejs
   let appId = req.body.appId;
-  let app = global.useAppDetails(appId, "/link-google-account");
+  let app = global.useAppDetails(appId, "/link-account");
   let { email: idpEmail } = payload;
 
   try {

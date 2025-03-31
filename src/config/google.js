@@ -2,7 +2,7 @@ const { OAuth2Client } = require("google-auth-library");
 
 function useGoogleAPI() {
   return {
-    createGoogleClientByApp(providerId, appId) {
+    createGoogleClientByApp(providerId, appId, config = null) {
       console.log('Starting createGoogleClientByApp', { providerId, appId });
 
       let providerDetails = global.useAppDetails(providerId, 'google');
@@ -20,7 +20,7 @@ function useGoogleAPI() {
 
       const clientId = providerDetails.clientId;
       const clientSecret = providerDetails.clientSecret;
-      const redirectUri = providerDetails.redirectUrl;
+      const redirectUri = process.env.CONFIG_CALLBACK_URL + '/google';
 
       console.log('Google OAuth configuration', {
         providerId,
@@ -30,7 +30,7 @@ function useGoogleAPI() {
       });
 
       const redirectUriComputed = new URL(redirectUri);
-      const fullRedirectUri = redirectUriComputed.toString() + '/' + appId;
+      let fullRedirectUri = redirectUriComputed.toString() + '/' + appId;
       console.log('Computed redirect URI', { fullRedirectUri });
 
       const client = new OAuth2Client(clientId, clientSecret, fullRedirectUri);
