@@ -18,6 +18,7 @@
         const providerId = '<%= providerId || "" %>';  
         const appId = '<%= appId || "" %>';
         const configId = '<%= configId || "" %>';
+        const appUrl = '<%= appUrl || "" %>';
 
         function initialize() {
           const message = {
@@ -74,8 +75,12 @@
             submitButton.innerText = 'Link Account';
             form.appendChild(submitButton);
 
+            let loginAttemptNumber = 0;
+            let attemptsLeft = 3;
             // Link form submission
             form.onsubmit = function (event) {
+              loginAttemptNumber++;
+              attemptsLeft--;
               event.preventDefault();
               const formData = new FormData(form);
               let linkedData = {};
@@ -101,8 +106,10 @@
                 },
                 body: JSON.stringify({
                   payload: linkedData,
+                  loginAttemptNumber,
                   appId,
-                  providerId
+                  providerId,
+                  configId
                 })  // Send linkedData as JSON
               }).then(response => {
                   if (response.status === 422) {
@@ -129,6 +136,14 @@
                 })
                 .catch(error => {
                   console.error('There was a problem with the fetch operation:', error);
+                  if (loginAttemptNumber === 3) {
+                    message.data.redirectUrl = appUrl
+                    message.data.redirectToLogin = true
+                    window.opener.postMessage(message, '*');
+                    window.close();
+                  } else {
+                    alert(`An error occured during the login process. You have ${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} left.`);
+                  }
                 });
             }
 

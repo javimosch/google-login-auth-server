@@ -1,10 +1,12 @@
+const {omitKeysInObject} = require("./utils");
+
 /**
  * Handles OAuth authorization flow for different providers
  * @param {Object} req Express request object
  * @param {Object} res Express response object
  * @param {Object} config Provider identifier
  */
-function handleOAuthByClientConfig(req, res, config) {
+async function handleOAuthByClientConfig(req, res, config) {
   const redirectUri = process.env.CONFIG_CALLBACK_URL
   let callbackUrl = new URL(redirectUri);
   callbackUrl += "/" + config.provider;
@@ -28,14 +30,23 @@ function handleOAuthByClientConfig(req, res, config) {
   }
 
   const authUrlObj = new URL(authUrl);
-  let clientParamName = authUrlObj.toString().includes('auth0')?'client':'client_id'
+  let clientParamName = authUrlObj.toString().includes('auth0') ? 'client' : 'client_id'
 
   const url = new URL(authUrlObj.toString());
   url.searchParams.append(clientParamName, clientId);
-  url.searchParams.append("redirect_uri", callbackUrl.toString());
   url.searchParams.append("response_type", "code");
-  url.searchParams.append("scope", scope);
+  url.searchParams.append("redirect_uri", callbackUrl.toString());
   url.searchParams.append("state", config._id);
+  url.searchParams.append("scope", scope);
+
+  await saveSsoLog({
+    message: 'Authentication URL : ' + url.toString(),
+    configId: config._id,
+    clientName: config.clientName,
+    provider: config.provider,
+    app: config.applications[0],
+    attemptId: req.session.auth_attempt_id
+  });
 
   res.redirect(url.toString());
 }
@@ -120,11 +131,12 @@ function handleOAuth(req, res, providerId) {
  * @param {string} appId - The unique identifier for the external application.
  * @param {Object} accountDetails - An object containing sensitive external app user account details.
  *        This may include information such as client credentials, login information, password, etc.
+ * @param {Object} ssoLogData
  * @returns {Promise<string>} A promise that resolves to the user's external identifier or rejects with an error.
  *
  * @throws {Error} Throws an error if the provided appId is invalid or if the API call fails.
  */
-async function getExternalUserIdGivenAppAccountDetails(appId, accountDetails) {
+async function getExternalUserIdGivenAppAccountDetails(appId, accountDetails, ssoLogData = {}) {
   try {
     let app = global.useAppDetails(
       appId,
@@ -168,27 +180,31 @@ async function getExternalUserIdGivenAppAccountDetails(appId, accountDetails) {
       requestFields: Object.keys(accountDetails)
     });
 
+    ssoLogData.message = `Pair user - get external user ID with url : ${app.externalApiGetExternalIdRoute}`
+    await saveSsoLog(ssoLogData);
     const response = await callExternalApi(
       "POST",
       `${app.externalApiGetExternalIdRoute}`,
       { ...accountDetails }
     );
-
-    // Log successful response (excluding sensitive data)
-    console.log("getExternalUserIdGivenAppAccountDetails - Success:", {
-      appId,
-      endpoint: app.externalApiGetExternalIdRoute,
+    let logData = {
       hasExternalId: !!response.externalId,
       responseFields: Object.keys(response),
       status: response.status,
       headers: response.headers
-    });
+    };
+    ssoLogData.message = `Pair user - get external user ID response`
+    ssoLogData.data = logData;
+    await saveSsoLog(ssoLogData);
+
+    // Log successful response (excluding sensitive data)
+    logData.appId = appId;
+    logData.endpoint = app.externalApiGetExternalIdRoute;
+    console.log("getExternalUserIdGivenAppAccountDetails - Success:", logData);
 
     return response;
   } catch (error) {
-    // Log error with context but without sensitive data
-    console.error("getExternalUserIdGivenAppAccountDetails - Error:", {
-      appId,
+    let logErrorData = {
       errorType: error.name,
       errorMessage: error.message,
       status: error.response?.status,
@@ -200,7 +216,15 @@ async function getExternalUserIdGivenAppAccountDetails(appId, accountDetails) {
         method: error.config?.method,
         headers: error.config?.headers
       }
-    });
+    };
+    ssoLogData.message = 'An error occured when attempting to retrieve the external user ID : ' + error.message;
+    ssoLogData.data = logErrorData;
+    ssoLogData.error = true;
+    await saveSsoLog(ssoLogData);
+    // Log error with context but without sensitive data
+    logErrorData.appId = appId;
+    logErrorData.errorMessage = error.message;
+    console.error("getExternalUserIdGivenAppAccountDetails - Error:", logErrorData);
     throw error;
   }
 }
@@ -212,6 +236,7 @@ async function getExternalUserIdGivenAppAccountDetails(appId, accountDetails) {
  * @param {string} externalUserId - The unique identifier for the external user.
  * It should correspond to the user's ID as recognized by the external application.
  * @param {string} appId - The application identifier
+ * @param {Object} ssoLogData
  *
  * @returns {Promise<string|null>}
  * A promise that resolves to the JWT token as a string if successful,
@@ -230,7 +255,7 @@ async function getExternalUserIdGivenAppAccountDetails(appId, accountDetails) {
  *
  * @async
  */
-async function getExternalToken(externalUserId, appId) {
+async function getExternalToken(externalUserId, appId, ssoLogData = {}) {
   try {
     let app = global.useAppDetails(appId, "getExternalToken");
     const { callExternalApi } = global.useAppAPIs(appId);
@@ -270,12 +295,16 @@ async function getExternalToken(externalUserId, appId) {
     );
 
     // Log response details
-    console.log("getExternalToken - Response:", {
+    const logData = {
       status: response.status,
       headers: response.headers,
       hasToken: !!(response[app.getJwtTokenField || 'token']),
       responseFields: Object.keys(response)
-    });
+    };
+    console.log("getExternalToken - Response:", logData);
+    ssoLogData.message = 'Get external token with external user ID response';
+    ssoLogData.data = logData;
+    await saveSsoLog(ssoLogData);
 
     // Check response status and handle response data
     if (
@@ -283,16 +312,16 @@ async function getExternalToken(externalUserId, appId) {
       response.status === 404 ||
       response.status === 500
     ) {
-      console.error(
-        "Error fetching JWT: HTTP status",
-        response.status,
-        "Response:",
-        {
-          status: response.status,
-          message: response.message || 'No error message provided',
-          fields: Object.keys(response)
-        }
-      );
+      const errorData = {
+        status: response.status,
+        message: response.message || 'No error message provided',
+        fields: Object.keys(response)
+      };
+      console.error("Error fetching JWT: HTTP status", response.status, "Response:", errorData);
+      ssoLogData.message = 'An error occured when attempting to get external token with external user ID';
+      ssoLogData.data = errorData;
+      ssoLogData.error = true;
+      await saveSsoLog(ssoLogData);
       return null; // Return null on specific client or server error
     }
 
@@ -314,7 +343,7 @@ async function getExternalToken(externalUserId, appId) {
     }
   } catch (error) {
     // Log error details
-    console.error("getExternalToken - Error:", {
+    let errorData = {
       appId,
       errorType: error.name,
       errorMessage: error.message,
@@ -327,7 +356,12 @@ async function getExternalToken(externalUserId, appId) {
         method: error.config?.method,
         headers: error.config?.headers
       }
-    });
+    };
+    ssoLogData.message = 'An error occured when attempting to get external token with external user ID';
+    ssoLogData.data = errorData;
+    ssoLogData.error = true;
+    await saveSsoLog(ssoLogData);
+    console.error("getExternalToken - Error:", );
     throw error;
   }
 }
@@ -337,57 +371,58 @@ async function getExternalToken(externalUserId, appId) {
  * @param {string} providerId Provider identifier
  * @param {string} appId Application identifier
  * @param {Object} config
+ * @param {string} attemptId
  * @returns {Object} Provider client with getDetailsGivenCode method
  * @throws {Error} If provider is not supported
  */
-function getProviderClient(providerId, appId, config = null) {
+function getProviderClient(providerId, appId, config = null, attemptId = '') {
   if(providerId.toLowerCase().includes('keycloak')) {
-    return getKeycloakClientByApp(providerId, appId, config);
+    return getKeycloakClientByApp(providerId, appId, config, attemptId);
   }
   if(providerId.toLowerCase().includes('google')) {
-    return getGoogleClientByApp(providerId, appId, config);
+    return getGoogleClientByApp(providerId, appId, config, attemptId);
   }
   if(providerId.toLowerCase().includes('gitlab')) {
-    return getGitLabClientByApp(providerId, appId, config);
+    return getGitLabClientByApp(providerId, appId, config, attemptId);
   }
   if(providerId.toLowerCase().includes('auth0')) {
-    return getAuth0ClientByApp(providerId, appId, config);
+    return getAuth0ClientByApp(providerId, appId, config, attemptId);
   }
 
   throw new Error(`Unsupported provider: ${providerId}`);
 }
 
-function getAuth0ClientByApp(providerId, appId, config = null) {
+function getAuth0ClientByApp(providerId, appId, config = null, attemptId = '') {
   const { useAuth0API } = require('../config/auth0');
   const { createAuth0ClientByApp } = useAuth0API();
-  const client = createAuth0ClientByApp(providerId, appId, config);
+  const client = createAuth0ClientByApp(providerId, appId, config, attemptId);
   return {
     getDetailsGivenCode: client.getDetailsGivenCode.bind(client)
   };
 }
 
-function getGitLabClientByApp(providerId, appId, config = null) {
+function getGitLabClientByApp(providerId, appId, config = null, attemptId = '') {
   const { useGitLabAPI } = require('../config/gitlab');
   const { createGitLabClientByApp } = useGitLabAPI();
-  const client = createGitLabClientByApp(providerId, appId, config);
+  const client = createGitLabClientByApp(providerId, appId, config, attemptId);
   return {
     getDetailsGivenCode: client.getGitLabDetailsGivenCode.bind(client)
   };
 }
 
-function getGoogleClientByApp(providerId, appId, config = null) {
+function getGoogleClientByApp(providerId, appId, config = null, attemptId = '') {
   const { useGoogleAPI } = require('../config/google');
   const { createGoogleClientByApp } = useGoogleAPI();
-  const client = createGoogleClientByApp(providerId, appId, config);
+  const client = createGoogleClientByApp(providerId, appId, config, attemptId);
   return {
     getDetailsGivenCode: client.getGoogleDetailsGivenCode.bind(client)
   };
 }
 
-function getKeycloakClientByApp(providerId, appId, config = null) {
+function getKeycloakClientByApp(providerId, appId, config = null, attemptId = '') {
   const { useKeycloakAPI } = require('../config/keycloak');
   const { createKeycloakClientByApp } = useKeycloakAPI();
-  const client = createKeycloakClientByApp(providerId, appId, config);
+  const client = createKeycloakClientByApp(providerId, appId, config, attemptId);
   return {
     getDetailsGivenCode: client.getKeycloakDetailsGivenCode.bind(client)
   };

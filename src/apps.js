@@ -1,5 +1,6 @@
 const dotenv = require("dotenv");
 const axios = require("axios");
+const { omitKeysInObject } = require("../src/utils/utils");
 
 dotenv.config();
 
@@ -122,8 +123,8 @@ global.useAppAPIs = function (appId) {
             'Authorization': config.headers['Authorization'] ? '[BEARER TOKEN PRESENT]' : undefined,
             'X-API-KEY': config.headers['X-API-KEY'] ? '[API KEY PRESENT]' : undefined
           },
-          params: config.params,
-          data: config.data
+          params: config.params ? omitKeysInObject(config.params, ['password']) : {},
+          data: config.data ? omitKeysInObject(config.data, ['password']) : {}
         });
 
         const response = await axios(config);

@@ -7,7 +7,11 @@ const ClientConfigSchema = new mongoose.Schema({
   clientSecret: {
     type: String,
     set: function(v) {
-      return encrypt(v);
+      if (v) {
+        return encrypt(v);
+      }
+
+      return null;
     },
     get: function(v) {
       if (v) {

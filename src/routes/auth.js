@@ -26,10 +26,20 @@ router.get("/authorize/config/:configId", async (req, res) => {
   const configId = req.params.configId;
   const config = await ClientConfig.findOne({_id: configId});
   if (!config) {
-    console.error(`Invalid providerId specified: ${configId}`);
-    return res.status(400).send("Invalid provider specified");
+    console.error(`Invalid configId specified: ${configId}`);
+    return res.status(400).send("Invalid configId specified");
   }
   console.log('Config client', {config})
+
+  await saveSsoLog({
+    message: 'Start authentication',
+    configId: configId,
+    clientName: config.clientName,
+    provider: config.provider,
+    app: config.applications[0],
+    attemptId: req.session.auth_attempt_id
+  });
+
   handleOAuthByClientConfig(req, res, config);
 });
 
@@ -58,10 +68,20 @@ router.get("/callback/:providerId/:appId?/:configId?", async (req, res) => {
     }
     console.log('config client', {config})
 
+    let ssoLogData = {message: 'Start callback', provider: providerId, app: appId, attemptId: req.session.auth_attempt_id};
+    if (config !== null) {
+      ssoLogData.configId = config._id
+      ssoLogData.clientName = config.clientName
+    }
+    await saveSsoLog(ssoLogData);
+
     // Get provider client and fetch user details
-    const providerClient = getProviderClient(providerId, appId, config);
+    const providerClient = getProviderClient(providerId, appId, config, req.session.auth_attempt_id);
     const payload = await providerClient.getDetailsGivenCode(code);
     const idpEmail = payload.email;
+
+    ssoLogData.message = `Received mail from ID provider : ${idpEmail}`
+    await saveSsoLog(ssoLogData);
 
     const linkDocument = await global.getUserLinkByEmail(
       providerId,
@@ -72,10 +92,15 @@ router.get("/callback/:providerId/:appId?/:configId?", async (req, res) => {
     payload.linked = !!linkDocument;
 
     if (payload.linked) {
+      ssoLogData.message = `Get auth JWT for external app with external user ID : ${linkDocument.externalUserId}`;
+      await saveSsoLog(ssoLogData);
       try {
-        let token = await getExternalToken(linkDocument.externalUserId, appId);
+        let token = await getExternalToken(linkDocument.externalUserId, appId, ssoLogData);
         payload.token = token;
         payload.redirectUrl = app.externalAppUrl + "/?_token=" + token;
+        ssoLogData.message = `Redirect URL to the external app`;
+        ssoLogData.data = {redirectUrl: app.externalAppUrl + "/?_token=..."};
+        await saveSsoLog(ssoLogData);
       } catch (err) {
         console.log(`ERROR ${routePath} get jwt`, {
           err,
@@ -91,14 +116,18 @@ router.get("/callback/:providerId/:appId?/:configId?", async (req, res) => {
     linkFields =
       linkFields instanceof Array ? linkFields : linkFields.split(",");
 
+    ssoLogData.message = `Generate auth login form or redirect URL button for external app`
+    await saveSsoLog(ssoLogData);
     res.render("popup-login", {
       user: payload,
       linkFields: linkFields.join(","),
+      appUrl: app.externalAppUrl,
       appId,
       providerId,
       configId: config === null ? '' : config._id,
     });
   } catch (error) {
+    delete req.session.auth_attempt_id;
     console.error("Authentication error:", {
       error,
       data: error.response?.data||"",
@@ -121,32 +150,53 @@ router.post("/link-account", async (req, res) => {
   });
 
   let payload = req.body.payload; // from popup-login.ejs
+  let providerId = req.body.providerId;
   let appId = req.body.appId;
+  let configId = req.body.configId;
+  let loginAttemptNumber = req.body.loginAttemptNumber;
   let app = global.useAppDetails(appId, "/link-account");
   let { email: idpEmail } = payload;
+  let config = null;
+  if (configId) {
+    config = await ClientConfig.findOne({_id: configId});
+  }
+
+  let ssoLogData = {message: '', provider: providerId, app: appId, attemptId: req.session.auth_attempt_id};
+  if (config !== null) {
+    ssoLogData.configId = configId
+    ssoLogData.clientName = config.clientName
+  }
 
   try {
     let { externalId: externalUserId } =
-      await getExternalUserIdGivenAppAccountDetails(appId, payload);
+      await getExternalUserIdGivenAppAccountDetails(appId, payload, ssoLogData);
 
+    ssoLogData.message = `Pair user - save external user ID in mongo : ${externalUserId}`
+    await saveSsoLog(ssoLogData);
     //@todo Store/Retrieve google metadata from redis/cache
     await linkExternalUser(
-      req.body.providerId,
+      providerId,
       appId,
       externalUserId,
       idpEmail,
       {}
     );
-    
-    let token = await getExternalToken(externalUserId, appId);
+    let token = await getExternalToken(externalUserId, appId, ssoLogData);
 
     let response = {
       redirectUrl: app.externalAppUrl + "/?_token=" + token,
       token,
     };
-  
+
+    ssoLogData.message = `Redirect URL to the external app`;
+    ssoLogData.data = {redirectUrl: app.externalAppUrl + "/?_token=..."};
+    await saveSsoLog(ssoLogData);
     res.json(response);
   } catch (error) {
+    if (loginAttemptNumber === 3) {
+      console.log('Delete auth_attempt_id session.');
+      delete req.session.auth_attempt_id;
+    }
     if (error.response && error.response.status === 422) {
       // If it's a 422 error, respond with the error message
       return res.status(422).json({

@@ -1,8 +1,9 @@
 const axios = require("axios");
+const {omitKeysInObject} = require("../utils/utils");
 
 function useKeycloakAPI() {
   return {
-    createKeycloakClientByApp(providerId, appId, config = null) {
+    createKeycloakClientByApp(providerId, appId, config = null, attemptId = '') {
       let clientId = '';
       let clientSecret = '';
       let redirectUri = '';
@@ -58,9 +59,14 @@ function useKeycloakAPI() {
 
           console.log('Token Request Parameters:', {
             ...tokenReqPayload,
-            client_secret: '***',
             endpoint: tokenEndpoint
           });
+          let ssoLogData = {message: `Get token using URL ${tokenEndpoint}`, provider: providerId, app: appId, attemptId: attemptId};
+          if (config !== null) {
+            ssoLogData.configId = config._id
+            ssoLogData.clientName = config.clientName
+          }
+          await saveSsoLog(ssoLogData);
 
           try {
             console.log('Requesting token from Keycloak...');
@@ -77,11 +83,16 @@ function useKeycloakAPI() {
             console.log('Token Response Status:', tokenResponse.status);
             console.log('Token Response Headers:', tokenResponse.headers);
             console.log('Access Token Received:', tokenResponse.data.access_token ? 'Yes' : 'No');
-            console.log('Full Token Response:', {
-              ...tokenResponse.data,
-              access_token: tokenResponse.data.access_token ? '[PRESENT]' : '[MISSING]',
-              refresh_token: tokenResponse.data.refresh_token ? '[PRESENT]' : '[MISSING]'
-            });
+            console.log('Refresh Token Received:', tokenResponse.data.refresh_token ? 'Yes' : 'No');
+            ssoLogData.message = 'Token response';
+            ssoLogData.data = {
+              responseData: omitKeysInObject(tokenResponse.data, ['access_token', 'refresh_token']),
+              status: tokenResponse.status,
+              headers: tokenResponse.headers,
+              accessTokenReceived: tokenResponse.data.access_token ? 'Yes' : 'No',
+              refreshTokenReceived: tokenResponse.data.refresh_token ? 'Yes' : 'No',
+            };
+            await saveSsoLog(ssoLogData);
 
             const accessToken = tokenResponse.data.access_token;
             if (!accessToken) {
@@ -90,11 +101,9 @@ function useKeycloakAPI() {
 
             // Use the access token to get user info
             console.log('Requesting user info with access token...');
-            console.log('User Info Request Headers:', {
-              'Authorization': `Bearer ${accessToken}`,
-              'Endpoint': userInfoEndpoint
-            });
-
+            ssoLogData.message = `Get user info using URL ${userInfoEndpoint}`;
+            ssoLogData.data = {};
+            await saveSsoLog(ssoLogData);
             const userResponse = await axios.get(userInfoEndpoint, {
               headers: {
                 'Authorization': `Bearer ${accessToken}`
@@ -109,6 +118,13 @@ function useKeycloakAPI() {
               email: userResponse.data.email || '[MISSING]'
             });
 
+            ssoLogData.message = 'Response user info';
+            ssoLogData.data = {
+              responseData: userResponse.data,
+              status: userResponse.status,
+              headers: userResponse.headers,
+            };
+            await saveSsoLog(ssoLogData);
             return {
               email: userResponse.data.email,
               name: userResponse.data.name,
@@ -116,7 +132,7 @@ function useKeycloakAPI() {
               sub: userResponse.data.sub
             };
           } catch (error) {
-            console.error('Keycloak API Error:', {
+            const logErrorData = {
               phase: error.config?.url.includes('token') ? 'Token Request' : 'User Info Request',
               status: error.response?.status,
               statusText: error.response?.statusText,
@@ -124,7 +140,12 @@ function useKeycloakAPI() {
               headers: error.response?.headers,
               message: error.message,
               requestHeaders: error.config?.headers
-            });
+            }
+            console.error('Keycloak API Error:', logErrorData);
+            ssoLogData.message = 'An error occured when attempting to retrieve the token or user info : ' + error.message;
+            ssoLogData.data = omitKeysInObject(logErrorData, ['message']);
+            ssoLogData.error = true;
+            await saveSsoLog(ssoLogData);
             throw error;
           }
         },

@@ -1,8 +1,9 @@
 const { OAuth2Client } = require("google-auth-library");
+const {omitKeysInObject} = require("../utils/utils");
 
 function useGoogleAPI() {
   return {
-    createGoogleClientByApp(providerId, appId, config = null) {
+    createGoogleClientByApp(providerId, appId, config = null, attemptId = '') {
       console.log('Starting createGoogleClientByApp', { providerId, appId });
 
       let providerDetails = global.useAppDetails(providerId, 'google');
@@ -39,6 +40,12 @@ function useGoogleAPI() {
       return {
         async getGoogleDetailsGivenCode(code) {
           console.log('Starting getGoogleDetailsGivenCode', { code: code.substring(0, 10) + '...' }); // Log only part of the code for security
+          let ssoLogData = {message: 'Get token from Google', provider: providerId, app: appId, attemptId: attemptId};
+          if (config !== null) {
+            ssoLogData.configId = config._id
+            ssoLogData.clientName = config.clientName
+          }
+          await saveSsoLog(ssoLogData);
 
           try {
             console.log('Exchanging code for tokens');
@@ -49,11 +56,22 @@ function useGoogleAPI() {
               refreshToken: tokens.refresh_token ? 'Present' : 'Missing',
               expiryDate: tokens.expiry_date
             });
+            ssoLogData.message = 'Token response';
+            ssoLogData.data = {
+              reponseData: omitKeysInObject(tokens, ['access_token', 'id_token', 'refresh_token']),
+              accessTokenReceived: tokens.access_token ? 'Yes' : 'No',
+              idTokenReceived: tokens.id_token ? 'Yes' : 'No',
+              refreshTokenReceived: tokens.refresh_token ? 'Yes' : 'No'
+            };
+            await saveSsoLog(ssoLogData);
 
             console.log('Setting credentials on OAuth2Client');
             client.setCredentials(tokens);
 
             console.log('Verifying ID token');
+            ssoLogData.message = 'Get user info from Google with token';
+            ssoLogData.data = {};
+            await saveSsoLog(ssoLogData);
             const ticket = await client.verifyIdToken({
               idToken: tokens.id_token,
               audience: clientId,
@@ -66,15 +84,23 @@ function useGoogleAPI() {
               name: payload.name,
               picture: payload.picture
             });
+            ssoLogData.message = 'Response user info';
+            ssoLogData.data = payload;
+            await saveSsoLog(ssoLogData);
 
             return payload;
           } catch (error) {
             console.error('Error in getGoogleDetailsGivenCode:', error);
-            console.error('Error details:', {
+            const logErrorData = {
               name: error.name,
               message: error.message,
               stack: error.stack
-            });
+            };
+            console.error('Error details:', logErrorData);
+            ssoLogData.message = 'An error occured when attempting to retrieve the token or user info from Google : ' + error.message;
+            ssoLogData.error = true;
+            ssoLogData.data = omitKeysInObject(logErrorData, ['message']);
+            await saveSsoLog(ssoLogData);
             throw error;
           }
         },

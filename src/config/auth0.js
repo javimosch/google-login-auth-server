@@ -1,9 +1,10 @@
 const axios = require("axios");
 const crypto = require('crypto');
+const { omitKeysInObject } = require("../utils/utils");
 
 function useAuth0API() {
   return {
-    createAuth0ClientByApp(providerId, appId, config = null) {
+    createAuth0ClientByApp(providerId, appId, config = null, attemptId = '') {
       let app = global.useAppDetails(appId, 'auth0');
       if (!app) {
         throw new Error("createAuth0ClientByApp: invalid appId: " + appId);
@@ -49,7 +50,13 @@ function useAuth0API() {
       return {
         async getDetailsGivenCode(code) {
           console.log('Auth0 getDetailsGivenCode - Starting with code:', code.substring(0, 10) + '...');
-          
+          let ssoLogData = {message: `Get token using URL ${tokenEndpoint}`, provider: providerId, app: appId, attemptId: attemptId};
+          if (config !== null) {
+            ssoLogData.configId = config._id
+            ssoLogData.clientName = config.clientName
+          }
+          await saveSsoLog(ssoLogData);
+
           const params = {
             client_id: clientId,
             client_secret: clientSecret,
@@ -62,7 +69,6 @@ function useAuth0API() {
           console.log('Token Request Parameters:', {
             ...params,
             client_id: clientId,
-            client_secret: '***'
           });
 
           try {
@@ -80,14 +86,22 @@ function useAuth0API() {
             console.log('Token Response Status:', tokenResponse.status);
             console.log('Token Response Headers:', tokenResponse.headers);
             console.log('Access Token Received:', tokenResponse.data.access_token ? 'Yes' : 'No');
-            console.log('Full Token Response:', {
-              ...tokenResponse.data,
-              access_token: tokenResponse.data.access_token ? '[PRESENT]' : '[MISSING]',
-              id_token: tokenResponse.data.id_token ? '[PRESENT]' : '[MISSING]'
-            });
+            console.log('ID Token Received:', tokenResponse.data.id_token ? 'Yes' : 'No');
+            ssoLogData.message = 'Token response';
+            ssoLogData.data = {
+              responseData: omitKeysInObject(tokenResponse.data, ['access_token', 'id_token']),
+              status: tokenResponse.status,
+              headers: tokenResponse.headers,
+              accessTokenReceived: tokenResponse.data.access_token ? 'Yes' : 'No',
+              idTokenReceived: tokenResponse.data.id_token ? 'Yes' : 'No',
+            }
+            await saveSsoLog(ssoLogData);
 
             // Get user info using the access token
             console.log('Requesting user info with access token...');
+            ssoLogData.message = `Get user info using URL ${userInfoEndpoint}`;
+            ssoLogData.data = {};
+            await saveSsoLog(ssoLogData);
             const userInfoResponse = await axios.get(userInfoEndpoint, {
               headers: {
                 'Authorization': `Bearer ${tokenResponse.data.access_token}`
@@ -101,10 +115,17 @@ function useAuth0API() {
               sub: userInfoResponse.data.sub || '[MISSING]',
               email: userInfoResponse.data.email || '[MISSING]'
             });
+            ssoLogData.message = 'Response user info';
+            ssoLogData.data = {
+              responseData: userInfoResponse.data,
+              status: userInfoResponse.status,
+              headers: userInfoResponse.headers,
+            };
+            await saveSsoLog(ssoLogData);
 
             return userInfoResponse.data;
           } catch (error) {
-            console.error('Auth0 API Error:', {
+            const logErrorData = {
               phase: error.config?.url.includes('token') ? 'Token Request' : 'User Info Request',
               status: error.response?.status,
               statusText: error.response?.statusText,
@@ -112,7 +133,12 @@ function useAuth0API() {
               headers: error.response?.headers,
               message: error.message,
               requestHeaders: error.config?.headers
-            });
+            }
+            console.error('Auth0 API Error:', logErrorData);
+            ssoLogData.message = 'An error occured when attempting to retrieve the token or user info : ' + error.message;
+            ssoLogData.data = omitKeysInObject(logErrorData, ['message']);
+            ssoLogData.error = true;
+            await saveSsoLog(ssoLogData);
             throw error;
           }
         },

@@ -72,6 +72,8 @@ services:
         published: 27020
         protocol: tcp
     restart: unless-stopped
+    volumes:
+      - mongo_data:/var/lib/mongo
     labels:
       - "traefik.enable=false"
 
@@ -110,4 +112,5 @@ networks:
     external: true
 
 volumes:
+    mongo_data:
     postgres_data:

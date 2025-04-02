@@ -67,6 +67,11 @@
         if (event.data.type === `${providerId.toLowerCase()}_auth`) {
           state.redirectUrl = event.data.data.redirectUrl
           if (state.redirectUrl) {
+            if (event.data.data.redirectToLogin) {
+              document.getElementById('message').innerText = 'Authentication error';
+              location.href = state.redirectUrl
+              return
+            }
             document.getElementById('message').innerText = 'Authentication success : ';
           } else {
             document.getElementById('message').innerText = 'Received from popup: ' + JSON.stringify(event.data);

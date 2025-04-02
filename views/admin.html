@@ -5,6 +5,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Configuration SSO</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+	  /* Style pour le conteneur de chaque champ */
+	  .input-field {
+		  position: relative;
+		  margin-bottom: 4px;
+	  }
+
+	  /* Style pour le texte d'aide flottant */
+	  .floating-hint {
+		  position: absolute;
+		  left: 0;
+		  font-size: 12px;
+		  color: #6b7280;
+		  opacity: 0;
+		  transform: translateY(0);
+		  transition: all 0.2s ease;
+		  pointer-events: none;
+	  }
+
+	  /* Position au-dessus de l'input */
+	  .hint-top {
+		  top: -18px;
+	  }
+
+	  /* Position en dessous de l'input */
+	  .hint-bottom {
+		  bottom: -18px;
+	  }
+
+	  /* Afficher le texte d'aide quand l'input est en focus */
+	  .input-field input:focus ~ .floating-hint {
+		  opacity: 1;
+	  }
+
+	  /* Garder le placeholder normal */
+	  .input-field input::placeholder {
+		  color: #9ca3af;
+	  }
+
+	  /* Ajuster l'espace pour les champs avec hint en bas */
+	  .input-field-with-bottom-hint {
+		  margin-bottom: 24px;
+	  }
+
+	  .hidden {
+		  display: none;
+	  }
+  </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
 <div class="container mx-auto px-4 py-8">
@@ -22,13 +70,15 @@
 
       <div class="flex flex-col">
         <label for="clientName" class="mb-2 text-gray-700 font-medium">Nom du client</label>
-        <input
-                type="text"
-                id="clientName"
-                placeholder="Saisissez le nom du client"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
+        <div class="input-field">
+          <input
+                  type="text"
+                  id="clientName"
+                  placeholder="Saisissez le nom du client"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+        </div>
       </div>
 
       <div class="flex flex-col hidden">
@@ -61,90 +111,97 @@
 
       <div class="flex flex-col" data-field="clientId">
         <label for="clientId" class="mb-2 text-gray-700 font-medium">ID client</label>
-        <input
-                type="text"
-                id="clientId"
-                placeholder="Saisissez l'ID client"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
+        <div class="input-field">
+          <input
+                  type="text"
+                  id="clientId"
+                  placeholder="Saisissez l'ID client"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+        </div>
       </div>
 
       <div class="flex flex-col" data-field="clientSecret">
         <label for="clientSecret" class="mb-2 text-gray-700 font-medium">Secret client</label>
-        <input
-                type="text"
-                id="clientSecret"
-                placeholder="Saisissez le secret client"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-      </div>
-
-      <div class="flex flex-col" data-field="domain">
-        <label for="domain" class="mb-2 text-gray-700 font-medium">Domaine</label>
-        <input
-                type="text"
-                id="domain"
-                placeholder="Saisissez le domaine"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
+        <div class="input-field">
+          <input
+                  type="text"
+                  id="clientSecret"
+                  placeholder="Saisissez le secret client"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+        </div>
       </div>
 
       <div class="flex flex-col" data-field="authorizationURL">
         <label for="authorizationURL" class="mb-2 text-gray-700 font-medium">URL d'authentification</label>
-        <input
-                type="text"
-                id="authorizationURL"
-                placeholder="Saisissez l'URL d'authentification"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
+        <div class="input-field">
+          <input
+                  type="text"
+                  id="authorizationURL"
+                  placeholder="Saisissez l'URL d'authentification"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+          <span class="floating-hint hint-bottom">Saisissez l'URL d'authentification</span>
+        </div>
       </div>
 
       <div class="flex flex-col" data-field="tokenURL">
         <label for="tokenURL" class="mb-2 text-gray-700 font-medium">URL de récupération du token</label>
-        <input
-                type="text"
-                id="tokenURL"
-                placeholder="Saisissez l'URL de récupération du token"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
+        <div class="input-field">
+          <input
+                  type="text"
+                  id="tokenURL"
+                  placeholder="Saisissez l'URL de récupération du token"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+          <span class="floating-hint hint-bottom">Saisissez l'URL de récupération du token</span>
+        </div>
       </div>
 
       <div class="flex flex-col" data-field="userInfoURL">
         <label for="userInfoURL" class="mb-2 text-gray-700 font-medium">URL de récupération des informations utilisateur</label>
-        <input
-                type="text"
-                id="userInfoURL"
-                placeholder="Saisissez l'URL des informations utilisateur"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
+        <div class="input-field">
+          <input
+                  type="text"
+                  id="userInfoURL"
+                  placeholder="Saisissez l'URL des informations utilisateur"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+          <span class="floating-hint hint-bottom">Saisissez l'URL des informations utilisateur</span>
+        </div>
       </div>
 
       <div class="flex flex-col" data-field="audience">
         <label for="audience" class="mb-2 text-gray-700 font-medium">URL de l'audience des API</label>
-        <input
-                type="text"
-                id="audience"
-                placeholder="Saisissez l'audience des API"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
+        <div class="input-field">
+          <input
+                  type="text"
+                  id="audience"
+                  placeholder="Saisissez l'audience des API"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+          <span class="floating-hint hint-bottom">Saisissez l'audience des API</span>
+        </div>
       </div>
 
       <div class="flex flex-col" data-field="scopes">
         <label for="scopes" class="mb-2 text-gray-700 font-medium">Scopes</label>
-        <input
-                type="text"
-                id="scopes"
-                placeholder="Saisissez les scopes (séparés par des virgules)"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
+        <div class="input-field">
+          <input
+                  type="text"
+                  id="scopes"
+                  placeholder="Saisissez les scopes (séparés par des virgules)"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+        </div>
       </div>
 
       <button
@@ -326,6 +383,11 @@
         if (input) {
           if (field !== 'scopes') {
             input.placeholder = value;
+            // Mettre à jour aussi le texte du hint flottant
+            const hintEl = input.nextElementSibling;
+            if (hintEl && hintEl.classList.contains('floating-hint')) {
+              hintEl.textContent = value;
+            }
           } else {
             input.value = value;
           }
@@ -343,10 +405,5 @@
   // Exécuter au chargement de la page
   updateFormFields();
 </script>
-<style>
-	.hidden {
-		display: none;
-	}
-</style>
 </body>
 </html>
