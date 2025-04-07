@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ClientConfig = require("../models/ClientConfig");
+const SsoLog = require("../models/SsoLog");
 
 // Route pour enregistrer une configuration
 router.post("/client-config", async (req, res) => {
@@ -62,6 +63,59 @@ router.delete("/client-config/:id", async (req, res) => {
     const deletedConfig = await ClientConfig.findByIdAndDelete(req.params.id);
     if (!deletedConfig) return res.status(404).json({ message: "Configuration non trouvée" });
     res.json({ message: "Configuration supprimée" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Récupérer tous les logs
+router.get("/logs", async (req, res) => {
+  try {
+    const {
+      startDate,
+      endDate,
+      message,
+      provider,
+      app,
+      configId,
+      attemptId,
+      clientName,
+      error,
+      sortBy = 'dt',
+      sortOrder = 'desc'
+    } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'startDate and endDate are required' });
+    }
+
+    const filters = {
+      dt: {
+        $gte: new Date(startDate + ' 00:00:00'),
+        $lte: new Date(endDate + ' 23:59:59'),
+      },
+    };
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    if (message) filters.message = new RegExp(message, 'i');
+    if (provider) filters.provider = provider;
+    if (app) filters.app = app;
+    if (configId) filters.configId = configId;
+    if (attemptId) filters.attemptId = attemptId;
+    if (clientName) filters.clientName = clientName;
+    if (error !== undefined) filters.error = error === 'true';
+
+    console.log('Log mongo filters', filters)
+    const logs = await SsoLog.find(filters)
+      .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await SsoLog.countDocuments(filters);
+
+    res.json({ logs, total });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

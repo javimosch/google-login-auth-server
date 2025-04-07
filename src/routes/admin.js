@@ -34,7 +34,11 @@ router.get("/logout", (req, res) => {
 
 // Protéger la page admin
 router.get("/", checkAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, "../../views/admin.html"));
+  res.render('admin', { title: 'Administration', currentPage: 'admin' });
+});
+
+router.get("/logs", checkAuth, (req, res) => {
+  res.render('logs', { title: 'Logs', currentPage: 'logs' });
 });
 
 module.exports = router;

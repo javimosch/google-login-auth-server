@@ -21,6 +21,7 @@ const SsoLogSchema = new mongoose.Schema({
 SsoLogSchema.index({ dt:1, app: 1 });
 SsoLogSchema.index({ dt:1, clientName: 1 });
 SsoLogSchema.index({ dt:1, provider: 1 });
+SsoLogSchema.index({ dt:1, error: 1, clientName: 1 });
 SsoLogSchema.index({ attemptId: 1 });
 
 module.exports = mongoose.model("SsoLog", SsoLogSchema);

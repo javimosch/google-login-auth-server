@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualisation des logs</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+	  :root {
+		  --primary: #4361ee;
+		  --primary-light: #4895ef;
+		  --secondary: #3f37c9;
+		  --success: #4cc9f0;
+		  --danger: #f72585;
+		  --warning: #f8961e;
+		  --info: #90e0ef;
+		  --dark: #212529;
+		  --light: #f8f9fa;
+		  --body-bg: #f9fafb;
+		  --card-bg: #ffffff;
+		  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+		  --radius: 8px;
+		  --transition: all 0.3s ease;
+	  }
+
+	  * {
+		  margin: 0;
+		  padding: 0;
+		  box-sizing: border-box;
+	  }
+
+	  body {
+		  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+		  background-color: var(--body-bg);
+		  color: var(--dark);
+		  line-height: 1.6;
+	  }
+
+	  .container {
+		  max-width: 1400px;
+		  margin: 0 auto;
+		  padding: 1.5rem;
+	  }
+
+	  header {
+		  display: flex;
+		  justify-content: space-between;
+		  align-items: center;
+		  margin-bottom: 2rem;
+	  }
+
+	  h1 {
+		  font-size: 1.8rem;
+		  font-weight: 600;
+		  color: var(--dark);
+	  }
+
+	  .card {
+		  background: var(--card-bg);
+		  border-radius: var(--radius);
+		  box-shadow: var(--shadow);
+		  padding: 1.5rem;
+		  margin-bottom: 1.5rem;
+		  transition: var(--transition);
+	  }
+
+	  .filters {
+		  display: grid;
+		  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+		  gap: 1rem;
+	  }
+
+	  .form-group {
+		  margin-bottom: 1rem;
+	  }
+
+	  label {
+		  display: block;
+		  font-size: 0.9rem;
+		  font-weight: 500;
+		  margin-bottom: 0.4rem;
+		  color: #555;
+	  }
+
+	  input, select {
+		  width: 100%;
+		  padding: 0.6rem;
+		  border: 1px solid #ddd;
+		  border-radius: var(--radius);
+		  font-size: 0.9rem;
+		  transition: var(--transition);
+	  }
+
+	  input:focus, select:focus {
+		  outline: none;
+		  border-color: var(--primary);
+		  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+	  }
+
+	  .btn {
+		  display: inline-flex;
+		  align-items: center;
+		  justify-content: center;
+		  padding: 0.6rem 1.2rem;
+		  border-radius: var(--radius);
+		  font-weight: 500;
+		  cursor: pointer;
+		  transition: var(--transition);
+		  border: none;
+		  gap: 0.5rem;
+	  }
+
+	  .btn-primary {
+		  background-color: var(--primary);
+		  color: white;
+	  }
+
+	  .btn-primary:hover {
+		  background-color: var(--secondary);
+	  }
+
+	  .btn-outline {
+		  background-color: transparent;
+		  border: 1px solid #ddd;
+	  }
+
+	  .btn-outline:hover {
+		  background-color: #f5f5f5;
+	  }
+
+	  .form-actions {
+		  display: flex;
+		  justify-content: flex-end;
+		  margin-top: 1rem;
+	  }
+
+	  table {
+		  width: 100%;
+		  border-collapse: collapse;
+		  background: white;
+		  border-radius: var(--radius);
+		  overflow: hidden;
+	  }
+
+	  thead {
+		  background-color: #f8f9fa;
+	  }
+
+	  th, td {
+		  padding: 1rem;
+		  text-align: left;
+		  border-bottom: 1px solid #eee;
+	  }
+
+	  th {
+		  font-weight: 600;
+		  color: #555;
+	  }
+
+	  .sortable {
+		  cursor: pointer;
+		  user-select: none;
+		  position: relative;
+	  }
+
+	  .sortable:hover {
+		  background-color: #f0f0f0;
+	  }
+
+	  .sortable::after {
+		  content: '↕';
+		  opacity: 0.3;
+		  margin-left: 0.5rem;
+	  }
+
+	  .sortable.asc::after {
+		  content: '↑';
+		  opacity: 1;
+	  }
+
+	  .sortable.desc::after {
+		  content: '↓';
+		  opacity: 1;
+	  }
+
+	  tr:hover {
+		  background-color: #f9fafb;
+	  }
+
+	  .error-cell {
+		  display: inline-flex;
+		  align-items: center;
+		  padding: 0.25rem 0.75rem;
+		  border-radius: 2rem;
+		  font-size: 0.8rem;
+		  font-weight: 500;
+	  }
+
+	  .error-yes {
+		  background-color: rgba(247, 37, 133, 0.1);
+		  color: var(--danger);
+	  }
+
+	  .error-no {
+		  background-color: rgba(76, 201, 240, 0.1);
+		  color: var(--success);
+	  }
+
+	  .detail-btn {
+		  background-color: transparent;
+		  border: none;
+		  cursor: pointer;
+		  color: var(--primary);
+		  transition: var(--transition);
+	  }
+
+	  .detail-btn:hover {
+		  color: var(--secondary);
+	  }
+
+	  .pagination {
+		  display: flex;
+		  justify-content: center;
+		  gap: 0.5rem;
+		  margin-top: 1.5rem;
+	  }
+
+	  .page-item {
+		  width: 2.5rem;
+		  height: 2.5rem;
+		  display: flex;
+		  align-items: center;
+		  justify-content: center;
+		  border-radius: var(--radius);
+		  background: white;
+		  border: 1px solid #eee;
+		  cursor: pointer;
+		  transition: var(--transition);
+	  }
+
+	  .page-item:hover:not(.active) {
+		  background-color: #f5f5f5;
+	  }
+
+	  .page-item.active {
+		  background-color: var(--primary);
+		  color: white;
+		  border-color: var(--primary);
+	  }
+
+	  .page-item:disabled {
+		  opacity: 0.5;
+		  cursor: not-allowed;
+	  }
+
+	  .modal {
+		  display: none;
+		  position: fixed;
+		  top: 0;
+		  left: 0;
+		  right: 0;
+		  bottom: 0;
+		  background: rgba(0, 0, 0, 0.5);
+		  justify-content: center;
+		  align-items: center;
+		  backdrop-filter: blur(5px);
+		  z-index: 1000;
+	  }
+
+	  .modal-content {
+		  background: white;
+		  border-radius: var(--radius);
+		  box-shadow: var(--shadow);
+		  width: 90%;
+		  max-width: 1000px;
+		  max-height: 90vh;
+		  overflow: hidden;
+		  display: flex;
+		  flex-direction: column;
+	  }
+
+	  .modal-header {
+		  display: flex;
+		  justify-content: space-between;
+		  align-items: center;
+		  padding: 1rem 1.5rem;
+		  border-bottom: 1px solid #eee;
+	  }
+
+	  .modal-body {
+		  padding: 1.5rem;
+		  overflow-y: auto;
+		  max-height: calc(90vh - 60px);
+	  }
+
+	  .modal-body pre {
+		  font-family: 'Consolas', 'Monaco', monospace;
+		  white-space: pre-wrap;
+		  word-break: break-word;
+		  background: #f8f9fa;
+		  padding: 1rem;
+		  border-radius: var(--radius);
+		  border: 1px solid #eee;
+	  }
+
+	  .close-btn {
+		  background: transparent;
+		  border: none;
+		  cursor: pointer;
+		  font-size: 1.5rem;
+		  color: #555;
+		  transition: var(--transition);
+	  }
+
+	  .close-btn:hover {
+		  color: var(--danger);
+	  }
+
+	  .truncate {
+		  white-space: nowrap;
+		  overflow: hidden;
+		  text-overflow: ellipsis;
+		  max-width: 300px;
+	  }
+
+	  .badge {
+		  display: inline-flex;
+		  padding: 0.25rem 0.5rem;
+		  border-radius: 2rem;
+		  font-size: 0.75rem;
+		  font-weight: 500;
+	  }
+
+	  .badge-primary {
+		  background-color: rgba(67, 97, 238, 0.1);
+		  color: var(--primary);
+	  }
+
+	  .empty-state {
+		  text-align: center;
+		  padding: 3rem;
+		  color: #777;
+	  }
+
+	  .empty-icon {
+		  font-size: 3rem;
+		  margin-bottom: 1rem;
+		  color: #ddd;
+	  }
+
+	  .loader {
+		  display: none;
+		  text-align: center;
+		  padding: 2rem;
+	  }
+
+	  .spinner {
+		  display: inline-block;
+		  width: 2rem;
+		  height: 2rem;
+		  border: 3px solid rgba(67, 97, 238, 0.2);
+		  border-radius: 50%;
+		  border-top-color: var(--primary);
+		  animation: spin 1s ease-in-out infinite;
+	  }
+
+	  @keyframes spin {
+		  to {
+			  transform: rotate(360deg);
+		  }
+	  }
+
+	  @media (max-width: 768px) {
+		  .filters {
+			  grid-template-columns: 1fr;
+		  }
+
+		  table {
+			  display: block;
+			  overflow-x: auto;
+		  }
+	  }
+  </style>
+</head>
+<body>
+<!-- Inclusion du menu uniquement sur cette page -->
+<%- include('partials/nav') %>
+<div class="container">
+  <header>
+    <h1><i class="fas fa-file-alt"></i> Visualisation des Logs</h1>
+  </header>
+
+  <div class="card">
+    <form id="filterForm">
+      <div class="filters">
+        <div class="form-group">
+          <label for="startDate">Date début *</label>
+          <input type="date" id="startDate" name="startDate" required/>
+        </div>
+        <div class="form-group">
+          <label for="endDate">Date fin *</label>
+          <input type="date" id="endDate" name="endDate" required/>
+          <div id="error-message" class="error-message" style="display: none;color: red">La période ne doit pas dépasser un mois (31 jours).</div>
+        </div>
+        <div class="form-group">
+          <label for="provider">Fournisseur d'accès</label>
+          <select id="provider" name="provider">
+            <option value="">Tous</option>
+            <option value="google">Google</option>
+            <option value="gitlab">GitLab</option>
+            <option value="keycloak">Keycloak</option>
+            <option value="auth0">Auth0</option>
+          </select>
+        </div>
+        <div class="form-group" style="display: none">
+          <label for="app">Application</label>
+          <select id="app" name="app">
+            <option value="">Tous</option>
+            <option value="georedv3">Geored V3</option>
+            <option value="styx">STYX</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="clientName">Client</label>
+          <input type="text" id="clientName" name="clientName" placeholder="Rechercher un client..."/>
+        </div>
+        <div class="form-group">
+          <label for="attemptId">Tentative de connexion n°</label>
+          <input type="text" id="attemptId" name="attemptId" placeholder="Rechercher sur une tentative de connexion..."/>
+        </div>
+        <div class="form-group">
+          <label for="error">Erreur</label>
+          <select id="error" name="error">
+            <option value="">Tous</option>
+            <option value="true">Oui</option>
+            <option value="false">Non</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-search"></i> Rechercher
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div id="loader" class="loader">
+      <div class="spinner"></div>
+      <p>Chargement des données...</p>
+    </div>
+
+    <div id="tableContainer">
+      <table id="logTable">
+        <thead>
+        <tr>
+          <th class="sortable" data-sort="dt">Date <span class="sort-icon"></span></th>
+          <th>Message</th>
+          <th class="sortable" data-sort="provider">Fournisseur d'accès <span class="sort-icon"></span></th>
+          <th class="sortable" data-sort="app">Application <span class="sort-icon"></span></th>
+          <th>Config ID</th>
+          <th class="sortable" data-sort="attemptId">Tentative de connexion n° <span class="sort-icon"></span></th>
+          <th class="sortable" data-sort="clientName">Client <span class="sort-icon"></span></th>
+          <th>Erreur</th>
+          <th>Détail</th>
+        </tr>
+        </thead>
+        <tbody id="logsTableBody"></tbody>
+      </table>
+
+      <div id="emptyState" class="empty-state" style="display:none;">
+        <div class="empty-icon">
+          <i class="fas fa-inbox"></i>
+        </div>
+        <h3>Aucun résultat</h3>
+        <p>Modifiez vos critères de recherche pour trouver des logs.</p>
+      </div>
+    </div>
+
+    <div id="pagination" class="pagination"></div>
+  </div>
+</div>
+
+<div id="modal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Détails du log</h3>
+      <button class="close-btn" onclick="closeModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <pre id="modalContent"></pre>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentSort = {field: 'dt', order: 'desc'};
+  let currentPage = 1;
+  const limit = 20;
+  let currentLogs = [];
+
+  const startDateInput = document.getElementById('startDate');
+  const endDateInput = document.getElementById('endDate');
+  const errorMessage = document.getElementById('error-message');
+
+  // Fonction pour vérifier la différence entre les dates
+  function checkDateDifference() {
+    if (startDateInput.value && endDateInput.value) {
+      const startDate = new Date(startDateInput.value);
+      const endDate = new Date(endDateInput.value);
+
+      // Calculer la différence en jours
+      const diffTime = Math.abs(endDate - startDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      // Vérifier si la différence est supérieure à 31 jours
+      if (diffDays > 31) {
+        errorMessage.style.display = 'block';
+        return false;
+      } else {
+        errorMessage.style.display = 'none';
+        return true;
+      }
+    }
+    return true;
+  }
+
+  // Set today and 7 days ago as default dates
+  window.addEventListener('DOMContentLoaded', () => {
+    const today = new Date();
+    const weekAgo = new Date();
+    weekAgo.setDate(today.getDate() - 7);
+    endDateInput.value = formatDate(today);
+    startDateInput.value = formatDate(weekAgo);
+
+    // Règle pour la date de début
+    startDateInput.addEventListener('change', function() {
+      if (this.value) {
+        // Si la date de fin est vide ou inférieure à la date de début
+        if (!endDateInput.value || endDateInput.value < this.value) {
+          endDateInput.value = this.value;
+        }
+        checkDateDifference()
+      }
+    });
+
+    // Règle pour la date de fin
+    endDateInput.addEventListener('change', function() {
+      if (this.value) {
+        // Si la date de début est supérieure à la date de fin
+        if (!startDateInput.value || startDateInput.value > this.value) {
+          startDateInput.value = this.value;
+        }
+        checkDateDifference()
+      }
+    });
+  });
+
+  function formatDate(date) {
+    return date.toISOString().split('T')[0];
+  }
+
+  document.getElementById('filterForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!checkDateDifference()) {
+      return;
+    }
+    currentPage = 1; // reset to page 1 when filters change
+    await fetchLogs();
+  });
+
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      // Remove all sorting classes first
+      document.querySelectorAll('th.sortable').forEach(el => {
+        el.classList.remove('asc', 'desc');
+      });
+
+      const field = th.dataset.sort;
+      if (currentSort.field === field) {
+        currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSort = {field, order: 'asc'};
+      }
+
+      // Add appropriate class based on sort direction
+      th.classList.add(currentSort.order);
+
+      fetchLogs();
+    });
+  });
+
+  async function fetchLogs() {
+    showLoader(true);
+
+    const form = document.getElementById('filterForm');
+    const params = new URLSearchParams();
+
+    for (let el of form.elements) {
+      if (el.name && el.value) {
+        params.append(el.name, el.value);
+      }
+    }
+
+    params.append('sortBy', currentSort.field);
+    params.append('sortOrder', currentSort.order);
+    params.append('page', currentPage);
+    params.append('limit', limit);
+
+    try {
+      const res = await fetch('/api/logs?' + params.toString());
+      const {logs, total} = await res.json();
+      renderLogs(logs, total);
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+      document.getElementById('logsTableBody').innerHTML = `
+          <tr>
+            <td colspan="9" style="text-align: center; padding: 2rem;">
+              <i class="fas fa-exclamation-triangle" style="color: var(--danger); font-size: 1.5rem;"></i>
+              <p>Une erreur est survenue lors du chargement des logs.</p>
+            </td>
+          </tr>
+        `;
+    } finally {
+      showLoader(false);
+    }
+  }
+
+  function showLoader(show) {
+    document.getElementById('loader').style.display = show ? 'block' : 'none';
+    document.getElementById('tableContainer').style.opacity = show ? '0.5' : '1';
+  }
+
+  function renderLogs(logs, total) {
+    currentLogs = logs;
+    const tbody = document.getElementById('logsTableBody');
+    const emptyState = document.getElementById('emptyState');
+
+    if (logs.length === 0) {
+      tbody.innerHTML = '';
+      emptyState.style.display = 'block';
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+
+    emptyState.style.display = 'none';
+    tbody.innerHTML = '';
+    logs.forEach(log => {
+      const rowIndex = logs.indexOf(log);
+      const row = document.createElement('tr');
+
+      const date = new Date(log.dt).toLocaleString('fr-FR', {
+        dateStyle: 'short',
+        timeStyle: 'medium'
+      });
+
+      row.innerHTML = `
+          <td>${date}</td>
+          <td class="truncate" title="${log.message}">${log.message}</td>
+          <td><span class="badge badge-primary">${log.provider}</span></td>
+      <td>${log.app}</td>
+      <td>${log.configId}</td>
+      <td>${log.attemptId}</td>
+      <td>${log.clientName}</td>
+          <td>
+            <span class="error-cell ${log.error ? 'error-yes' : 'error-no'}">
+              ${log.error ? '<i class="fas fa-exclamation-circle"></i> Oui' : '<i class="fas fa-check-circle"></i> Non'}
+            </span>
+          </td>
+    `;
+      if (log.data) {
+        row.innerHTML += `
+            <td>
+              <button class="detail-btn" data-index="${rowIndex}">
+                <i class="fas fa-info-circle"></i> Détails
+              </button>
+            </td>
+          `;
+      } else {
+        row.innerHTML += `<td>-</td>`;
+      }
+      tbody.appendChild(row);
+    });
+
+    renderPagination(total);
+
+    document.querySelectorAll('.detail-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const index = parseInt(btn.dataset.index);
+        const data = currentLogs[index]?.data;
+        showDetails(data);
+      });
+    });
+
+  }
+
+  function renderPagination(total) {
+    const pagination = document.getElementById('pagination');
+    const totalPages = Math.ceil(total / limit);
+    pagination.innerHTML = '';
+
+    if (totalPages <= 1) return;
+
+    // Previous button
+    if (currentPage > 1) {
+      const prevBtn = document.createElement('button');
+      prevBtn.className = 'page-item';
+      prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+      prevBtn.addEventListener('click', () => {
+        currentPage--;
+        fetchLogs();
+      });
+      pagination.appendChild(prevBtn);
+    }
+
+    // Page numbers
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    if (startPage > 1) {
+      const firstBtn = document.createElement('button');
+      firstBtn.className = 'page-item';
+      firstBtn.textContent = '1';
+      firstBtn.addEventListener('click', () => {
+        currentPage = 1;
+        fetchLogs();
+      });
+      pagination.appendChild(firstBtn);
+
+      if (startPage > 2) {
+        const ellipsis = document.createElement('span');
+        ellipsis.className = 'page-item';
+        ellipsis.textContent = '...';
+        ellipsis.style.cursor = 'default';
+        pagination.appendChild(ellipsis);
+      }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      const btn = document.createElement('button');
+      btn.className = `page-item ${i === currentPage ? 'active' : ''}`;
+      btn.textContent = i;
+      if (i !== currentPage) {
+        btn.addEventListener('click', () => {
+          currentPage = i;
+          fetchLogs();
+        });
+      }
+      pagination.appendChild(btn);
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        const ellipsis = document.createElement('span');
+        ellipsis.className = 'page-item';
+        ellipsis.textContent = '...';
+        ellipsis.style.cursor = 'default';
+        pagination.appendChild(ellipsis);
+      }
+
+      const lastBtn = document.createElement('button');
+      lastBtn.className = 'page-item';
+      lastBtn.textContent = totalPages;
+      lastBtn.addEventListener('click', () => {
+        currentPage = totalPages;
+        fetchLogs();
+      });
+      pagination.appendChild(lastBtn);
+    }
+
+    // Next button
+    if (currentPage < totalPages) {
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'page-item';
+      nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+      nextBtn.addEventListener('click', () => {
+        currentPage++;
+        fetchLogs();
+      });
+      pagination.appendChild(nextBtn);
+    }
+  }
+
+  function showDetails(data) {
+    const modal = document.getElementById('modal');
+    const modalContent = document.getElementById('modalContent');
+    modalContent.textContent = JSON.stringify(data, null, 2);
+    modal.style.display = 'flex';
+
+    // Add event listener to close when clicking outside
+    modal.addEventListener('click', function (event) {
+      if (event.target === modal) {
+        closeModal();
+      }
+    });
+
+    // Add escape key listener
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        closeModal();
+      }
+    }, {once: true});
+  }
+
+  function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+  }
+
+  // Initial load
+  window.addEventListener('load', fetchLogs);
+</script>
+</body>
+</html>
