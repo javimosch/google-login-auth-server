@@ -41,4 +41,8 @@ router.get("/logs", checkAuth, (req, res) => {
   res.render('logs', { title: 'Logs', currentPage: 'logs' });
 });
 
+router.get("/monitoring", checkAuth, (req, res) => {
+  res.render('monitoring', { title: 'Monitoring', currentPage: 'monitoring' });
+});
+
 module.exports = router;

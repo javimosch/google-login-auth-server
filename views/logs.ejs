@@ -119,15 +119,6 @@
 		  background-color: var(--secondary);
 	  }
 
-	  .btn-outline {
-		  background-color: transparent;
-		  border: 1px solid #ddd;
-	  }
-
-	  .btn-outline:hover {
-		  background-color: #f5f5f5;
-	  }
-
 	  .form-actions {
 		  display: flex;
 		  justify-content: flex-end;
@@ -403,7 +394,7 @@
           <div id="error-message" class="error-message" style="display: none;color: red">La période ne doit pas dépasser un mois (31 jours).</div>
         </div>
         <div class="form-group">
-          <label for="provider">Fournisseur d'accès</label>
+          <label for="provider">Fournisseur d'identité</label>
           <select id="provider" name="provider">
             <option value="">Tous</option>
             <option value="google">Google</option>
@@ -457,7 +448,7 @@
         <tr>
           <th class="sortable" data-sort="dt">Date <span class="sort-icon"></span></th>
           <th>Message</th>
-          <th class="sortable" data-sort="provider">Fournisseur d'accès <span class="sort-icon"></span></th>
+          <th class="sortable" data-sort="provider">Fournisseur d'identité <span class="sort-icon"></span></th>
           <th class="sortable" data-sort="app">Application <span class="sort-icon"></span></th>
           <th>Config ID</th>
           <th class="sortable" data-sort="attemptId">Tentative de connexion n° <span class="sort-icon"></span></th>

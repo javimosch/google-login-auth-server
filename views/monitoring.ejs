@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tableau de bord</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+	  :root {
+		  --primary: #4361ee;
+		  --primary-light: #4895ef;
+		  --secondary: #3f37c9;
+		  --success: #4cc9f0;
+		  --danger: #f72585;
+		  --warning: #f8961e;
+		  --info: #90e0ef;
+		  --dark: #212529;
+		  --light: #f8f9fa;
+		  --body-bg: #f9fafb;
+		  --card-bg: #ffffff;
+		  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+		  --radius: 8px;
+		  --transition: all 0.3s ease;
+	  }
+
+	  * {
+		  margin: 0;
+		  padding: 0;
+		  box-sizing: border-box;
+	  }
+
+	  body {
+		  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+		  background-color: var(--body-bg);
+		  color: var(--dark);
+		  line-height: 1.6;
+	  }
+
+	  .container {
+		  max-width: 1400px;
+		  margin: 0 auto;
+		  padding: 1.5rem;
+	  }
+
+	  header {
+		  display: flex;
+		  justify-content: space-between;
+		  align-items: center;
+		  margin-bottom: 2rem;
+	  }
+
+	  h1 {
+		  font-size: 1.8rem;
+		  font-weight: 600;
+		  color: var(--dark);
+	  }
+
+	  .card {
+		  background: var(--card-bg);
+		  border-radius: var(--radius);
+		  box-shadow: var(--shadow);
+		  padding: 1.5rem;
+		  margin-bottom: 1.5rem;
+		  transition: var(--transition);
+	  }
+
+	  .filters {
+		  display: grid;
+		  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+		  gap: 1rem;
+	  }
+
+	  .form-group {
+		  margin-bottom: 1rem;
+	  }
+
+	  label {
+		  display: block;
+		  font-size: 0.9rem;
+		  font-weight: 500;
+		  margin-bottom: 0.4rem;
+		  color: #555;
+	  }
+
+	  input, select {
+		  width: 100%;
+		  padding: 0.6rem;
+		  border: 1px solid #ddd;
+		  border-radius: var(--radius);
+		  font-size: 0.9rem;
+		  transition: var(--transition);
+	  }
+
+	  input:focus, select:focus {
+		  outline: none;
+		  border-color: var(--primary);
+		  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+	  }
+
+	  .btn {
+		  display: inline-flex;
+		  align-items: center;
+		  justify-content: center;
+		  padding: 0.6rem 1.2rem;
+		  border-radius: var(--radius);
+		  font-weight: 500;
+		  cursor: pointer;
+		  transition: var(--transition);
+		  border: none;
+		  gap: 0.5rem;
+	  }
+
+	  .btn-primary {
+		  background-color: var(--primary);
+		  color: white;
+	  }
+
+	  .btn-primary:hover {
+		  background-color: var(--secondary);
+	  }
+
+	  .form-actions {
+		  display: flex;
+		  justify-content: flex-end;
+		  margin-top: 1rem;
+	  }
+
+	  table {
+		  width: 100%;
+		  border-collapse: collapse;
+		  background: white;
+		  border-radius: var(--radius);
+		  overflow: hidden;
+	  }
+
+	  thead {
+		  background-color: #f8f9fa;
+	  }
+
+	  th, td {
+		  padding: 1rem;
+		  text-align: left;
+		  border-bottom: 1px solid #eee;
+	  }
+
+	  th {
+		  font-weight: 600;
+		  color: #555;
+	  }
+
+	  .sortable {
+		  cursor: pointer;
+		  user-select: none;
+		  position: relative;
+	  }
+
+	  .sortable:hover {
+		  background-color: #f0f0f0;
+	  }
+
+	  .sortable::after {
+		  content: '↕';
+		  opacity: 0.3;
+		  margin-left: 0.5rem;
+	  }
+
+	  .sortable.asc::after {
+		  content: '↑';
+		  opacity: 1;
+	  }
+
+	  .sortable.desc::after {
+		  content: '↓';
+		  opacity: 1;
+	  }
+
+	  tr:hover {
+		  background-color: #f9fafb;
+	  }
+
+	  .pagination {
+		  display: flex;
+		  justify-content: center;
+		  gap: 0.5rem;
+		  margin-top: 1.5rem;
+	  }
+
+	  .page-item {
+		  width: 2.5rem;
+		  height: 2.5rem;
+		  display: flex;
+		  align-items: center;
+		  justify-content: center;
+		  border-radius: var(--radius);
+		  background: white;
+		  border: 1px solid #eee;
+		  cursor: pointer;
+		  transition: var(--transition);
+	  }
+
+	  .page-item:hover:not(.active) {
+		  background-color: #f5f5f5;
+	  }
+
+	  .page-item.active {
+		  background-color: var(--primary);
+		  color: white;
+		  border-color: var(--primary);
+	  }
+
+	  .page-item:disabled {
+		  opacity: 0.5;
+		  cursor: not-allowed;
+	  }
+
+	  .loader {
+		  display: none;
+		  text-align: center;
+		  padding: 2rem;
+	  }
+
+	  .spinner {
+		  display: inline-block;
+		  width: 2rem;
+		  height: 2rem;
+		  border: 3px solid rgba(67, 97, 238, 0.2);
+		  border-radius: 50%;
+		  border-top-color: var(--primary);
+		  animation: spin 1s ease-in-out infinite;
+	  }
+
+	  @keyframes spin {
+		  to {
+			  transform: rotate(360deg);
+		  }
+	  }
+
+	  @media (max-width: 768px) {
+		  .filters {
+			  grid-template-columns: 1fr;
+		  }
+
+		  table {
+			  display: block;
+			  overflow-x: auto;
+		  }
+	  }
+
+	  #export-button {
+		  margin-bottom: 10px;
+		  padding: 8px 16px;
+		  background-color: #28a745;
+		  color: white;
+		  border: none;
+		  cursor: pointer;
+		  border-radius: 4px;
+	  }
+
+	  #export-button:hover {
+		  background-color: #218838;
+	  }
+  </style>
+</head>
+<body>
+<!-- Inclusion du menu uniquement sur cette page -->
+<%- include('partials/nav') %>
+<div class="container">
+  <header>
+    <h1><i class="fas fa-file-alt"></i> Tableau de bord des tentatives de connexions</h1>
+  </header>
+
+  <div class="card">
+    <form id="filterForm">
+      <div class="filters">
+        <div class="form-group">
+          <label for="startDate">Date début *</label>
+          <input type="date" id="startDate" name="startDate" required/>
+        </div>
+        <div class="form-group">
+          <label for="endDate">Date fin *</label>
+          <input type="date" id="endDate" name="endDate" required/>
+          <div id="error-message" class="error-message" style="display: none;color: red">La période ne doit pas dépasser un mois (31 jours).</div>
+        </div>
+        <div class="form-group">
+          <label for="provider">Fournisseur d'identité</label>
+          <select id="provider" name="provider">
+            <option value=""></option>
+            <option value="google">Google</option>
+            <option value="gitlab">GitLab</option>
+            <option value="keycloak">Keycloak</option>
+            <option value="auth0">Auth0</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="groupBy">Grouper par</label>
+          <select id="groupBy" name="groupBy">
+            <option value=""></option>
+            <option value="client">Client</option>
+            <option value="provider">Fournisseur d'identité</option>
+            <option value="user">Utilisateur</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="groupByPeriod">Grouper par période</label>
+          <select id="groupByPeriod" name="groupByPeriod">
+            <option value=""></option>
+            <option value="date">Date</option>
+          </select>
+        </div>
+        <div class="form-group" style="display: none">
+          <label for="app">Application</label>
+          <select id="app" name="app">
+            <option value="">Tous</option>
+            <option value="georedv3">Geored V3</option>
+            <option value="styx">STYX</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="clientName">Client</label>
+          <input type="text" id="clientName" name="clientName" placeholder="Rechercher un client..."/>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-search"></i> Rechercher
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div id="loader" class="loader">
+      <div class="spinner"></div>
+      <p>Chargement des données...</p>
+    </div>
+
+    <button id="export-button">Télécharger en CSV</button>
+    <div id="tableContainer">
+    </div>
+
+    <div id="pagination" class="pagination"></div>
+  </div>
+</div>
+
+<script>
+  const ITEMS_PER_PAGE = 10;
+  const COLUMNS = {
+    client: "Client",
+    provider: "Fournisseur d'identité",
+    user: "Utilisateur",
+    date: "Date",
+    nbError: "Nombre de tentatives en erreur",
+    nbSuccess: "Nombre de tentatives réussies",
+  };
+  let allData = [];
+  let currentPage = 1;
+  let sortColumn = null;
+  let sortDirection = 'asc';
+
+  const startDateInput = document.getElementById('startDate');
+  const endDateInput = document.getElementById('endDate');
+  const errorMessage = document.getElementById('error-message');
+
+  // Fonction pour vérifier la différence entre les dates
+  function checkDateDifference() {
+    if (startDateInput.value && endDateInput.value) {
+      const startDate = new Date(startDateInput.value);
+      const endDate = new Date(endDateInput.value);
+
+      // Calculer la différence en jours
+      const diffTime = Math.abs(endDate - startDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      // Vérifier si la différence est supérieure à 31 jours
+      if (diffDays > 31) {
+        errorMessage.style.display = 'block';
+        return false;
+      } else {
+        errorMessage.style.display = 'none';
+        return true;
+      }
+    }
+    return true;
+  }
+
+  // Set today and 7 days ago as default dates
+  window.addEventListener('DOMContentLoaded', () => {
+    const today = new Date();
+    const weekAgo = new Date();
+    weekAgo.setDate(today.getDate() - 7);
+    endDateInput.value = formatDate(today);
+    startDateInput.value = formatDate(weekAgo);
+
+    // Règle pour la date de début
+    startDateInput.addEventListener('change', function() {
+      if (this.value) {
+        // Si la date de fin est vide ou inférieure à la date de début
+        if (!endDateInput.value || endDateInput.value < this.value) {
+          endDateInput.value = this.value;
+        }
+        checkDateDifference()
+      }
+    });
+
+    // Règle pour la date de fin
+    endDateInput.addEventListener('change', function() {
+      if (this.value) {
+        // Si la date de début est supérieure à la date de fin
+        if (!startDateInput.value || startDateInput.value > this.value) {
+          startDateInput.value = this.value;
+        }
+        checkDateDifference()
+      }
+    });
+  });
+
+  function formatDate(date) {
+    return date.toISOString().split('T')[0];
+  }
+
+  document.getElementById('filterForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!checkDateDifference()) {
+      return;
+    }
+    currentPage = 1; // reset to page 1 when filters change
+    await fetchData();
+  });
+
+  async function fetchData() {
+    showLoader(true);
+
+    const form = document.getElementById('filterForm');
+    const params = new URLSearchParams();
+
+    for (let el of form.elements) {
+      if (el.name && el.value) {
+        if (el.name === 'groupByPeriod' || el.name === 'groupBy') {
+          if (params.get('groupBy')) {
+            params.set('groupBy', params.get('groupBy') + ',' + el.value);
+          } else {
+            params.append('groupBy', el.value);
+          }
+        } else {
+          params.append(el.name, el.value);
+        }
+      }
+    }
+
+    try {
+      const res = await fetch('/api/login-attempts?' + params.toString());
+      allData = await res.json();
+      renderTable();
+      renderPagination();
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+    } finally {
+      showLoader(false);
+    }
+  }
+
+  function sortData(data) {
+    if (!sortColumn) return data;
+    return [...data].sort((a, b) => {
+      const valA = a[sortColumn];
+      const valB = b[sortColumn];
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return sortDirection === 'asc' ? valA - valB : valB - valA;
+      }
+      return sortDirection === 'asc'
+        ? String(valA).localeCompare(String(valB))
+        : String(valB).localeCompare(String(valA));
+    });
+  }
+
+  function renderTable() {
+    const container = document.getElementById('tableContainer');
+    const sortedData = sortData(allData);
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    const pageData = sortedData.slice(start, end);
+
+    if (pageData.length === 0) {
+      container.innerHTML = "<p>Aucune donnée à afficher.</p>";
+      return;
+    }
+
+    const columns = Object.keys(pageData[0]);
+    let tableHTML = "<table><thead><tr>";
+
+    columns.forEach(col => {
+      const isSorted = sortColumn === col;
+      const sortClass = isSorted ? (sortDirection === 'asc' ? 'sorted-asc' : 'sorted-desc') : '';
+      const colName = COLUMNS[col] || col;
+      tableHTML += `<th class="sortable ${sortClass}" onclick="handleSort('${col}')">${colName}</th>`;
+    });
+    tableHTML += "</tr></thead><tbody>";
+
+    pageData.forEach(row => {
+      tableHTML += "<tr>";
+      columns.forEach(col => {
+        tableHTML += `<td>${row[col]}</td>`;
+      });
+      tableHTML += "</tr>";
+    });
+
+    tableHTML += "</tbody></table>";
+    container.innerHTML = tableHTML;
+  }
+
+  function renderPagination() {
+    const pagination = document.getElementById('pagination');
+    pagination.innerHTML = '';
+    const totalPages = Math.ceil(allData.length / ITEMS_PER_PAGE);
+
+    for (let i = 1; i <= totalPages; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'page-item';
+      btn.textContent = i;
+      if (i === currentPage) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        currentPage = i;
+        renderTable();
+        renderPagination();
+      });
+      pagination.appendChild(btn);
+    }
+  }
+
+  window.handleSort = function(column) {
+    if (sortColumn === column) {
+      sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortColumn = column;
+      sortDirection = 'asc';
+    }
+    renderTable();
+  }
+
+  document.getElementById("export-button").addEventListener("click", () => {
+    exportToCSV(allData, "export.csv");
+  });
+
+  function exportToCSV(data, filename) {
+    if (!data.length) return;
+    const columns = Object.keys(data[0]);
+    let headers = [];
+    columns.forEach(col => {
+      headers.push(COLUMNS[col] || col);
+    });
+    const csvRows = [
+      headers.join(","), // en-têtes
+      ...data.map(row =>
+        columns.map(col => `"${String(row[col]).replace(/"/g, '""')}"`).join(",")
+      )
+    ];
+    const csvContent = csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.setAttribute("href", URL.createObjectURL(blob));
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function showLoader(show) {
+    document.getElementById('loader').style.display = show ? 'block' : 'none';
+    document.getElementById('tableContainer').style.opacity = show ? '0.5' : '1';
+  }
+
+
+  // Initial load
+  window.addEventListener('load', fetchData);
+</script>
+</body>
+</html>

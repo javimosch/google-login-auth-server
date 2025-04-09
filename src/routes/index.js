@@ -36,7 +36,7 @@ router.get('/', async (req, res) => {
   res.render('index', {
     apps: global.applications.filter(a => !a.openidProvider),
     message: message,
-    configId: req.query.clientId ?? '',
+    configId: message === '' ? (req.query.clientId ?? '') : '',
     idps: global.applications.filter(a => a.openidProvider)
   });
 });
