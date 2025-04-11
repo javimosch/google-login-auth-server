@@ -1,6 +1,7 @@
 {
-  "format": "{type} ({context}) {msg} (#{gitBranchNumber})",
+  "format": "{type} ({context}) {msg} {hash}{gitBranchNumber}",
   "variables": {
-    "context": "module/feature/scope"
+    "context": "module/feature/scope if applicable or 'common'",
+    "hash":"'#' if a gitBranchNumber is provided otherwise ''"
   }
 }
