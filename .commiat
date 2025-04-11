@@ -1,0 +1,6 @@
+{
+  "format": "{type} ({context}) {msg} (#{gitBranchNumber})",
+  "variables": {
+    "context": "module/feature/scope"
+  }
+}
